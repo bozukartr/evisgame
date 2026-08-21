@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="2–4 yaş için sakin, güvenli ve çevrimdışı çalışan eşleştirme oyunu.">
+<meta name="description" content="2–4 yaş için sakin, güvenli ve çevrimdışı çalışan mini oyun koleksiyonu.">
 <meta name="application-name" content="EvisGame">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="EvisGame">
@@ -17,7 +17,7 @@
 <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="mask-icon" href="icons/safari-pinned-tab.svg" color="#43534B">
-<title>EvisGame – Eşleştir</title>
+<title>EvisGame – Oyna ve Öğren</title>
 <style>
   :root{
     color-scheme:light;
@@ -39,7 +39,8 @@
     touch-action:manipulation;cursor:pointer;transition:opacity .2s ease,transform .2s ease;
   }
   .install-button:active{transform:translateX(-50%) scale(.96)}
-  .install-button[hidden],.install-sheet[hidden],.reset-button[hidden],.reset-sheet[hidden],.toast[hidden]{display:none}
+  .install-button[hidden],.install-sheet[hidden],.reset-button[hidden],.reset-sheet[hidden],.home-button[hidden],
+  .demo-ad[hidden],.parent-sheet[hidden],.toast[hidden]{display:none}
   .install-button svg{width:18px;height:18px;stroke:currentColor}
   .install-sheet{position:fixed;z-index:8;inset:0;display:grid;place-items:end center;padding:18px;
     padding-bottom:calc(var(--safe-bottom) + 18px);background:rgba(50,64,57,.28);backdrop-filter:blur(8px);
@@ -50,11 +51,13 @@
   .install-card h1{margin:14px 0 7px;font-size:21px}.install-card p{margin:0;line-height:1.5;font-size:15px}
   .close-button{position:absolute;right:12px;top:12px;width:40px;height:40px;border:0;border-radius:50%;
     color:#43534B;background:rgba(94,107,100,.10);font-size:24px;line-height:1;touch-action:manipulation;cursor:pointer}
-  .reset-button{position:fixed;z-index:5;left:calc(var(--safe-left) + 14px);bottom:calc(var(--safe-bottom) + 14px);
+  .reset-button,.home-button{position:fixed;z-index:5;bottom:calc(var(--safe-bottom) + 14px);
     display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(65,83,73,.14);border-radius:50%;
     background:rgba(248,242,231,.88);color:#43534B;box-shadow:0 8px 24px rgba(52,71,61,.16);
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);touch-action:manipulation;cursor:pointer}
-  .reset-button:active{transform:scale(.94)}.reset-button svg{width:23px;height:23px;stroke:currentColor}
+  .reset-button{left:calc(var(--safe-left) + 14px)}.home-button{right:calc(var(--safe-right) + 14px)}
+  .reset-button:active,.home-button:active{transform:scale(.94)}
+  .reset-button svg,.home-button svg{width:23px;height:23px;stroke:currentColor}
   .reset-sheet{position:fixed;z-index:8;inset:0;display:grid;place-items:end center;padding:18px;
     padding-bottom:calc(var(--safe-bottom) + 18px);background:rgba(50,64,57,.28);backdrop-filter:blur(8px);
     -webkit-backdrop-filter:blur(8px);touch-action:manipulation}
@@ -64,10 +67,36 @@
   .reset-actions{display:grid;gap:10px}.action-button{width:100%;border:0;border-radius:16px;padding:14px 16px;
     background:#86BFA8;color:#283D34;font:750 15px/1.1 system-ui,sans-serif;touch-action:manipulation;cursor:pointer}
   .action-button.secondary{background:rgba(94,107,100,.10);color:#43534B}.action-button.danger{background:#EDA0A8;color:#4F2F34}
+  .demo-ad{position:fixed;z-index:20;inset:0;display:grid;grid-template-rows:auto 1fr auto;box-sizing:border-box;
+    padding:calc(var(--safe-top) + 16px) 18px calc(var(--safe-bottom) + 18px);background:linear-gradient(160deg,#263B36,#58796D);
+    color:white;touch-action:manipulation;overflow:hidden}
+  .ad-top{display:flex;align-items:center;justify-content:space-between;min-height:48px}.ad-badge{font:800 11px/1 system-ui,sans-serif;
+    letter-spacing:.14em;padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.14)}
+  .ad-timer,.ad-close{display:grid;place-items:center;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.16);
+    color:white;font:800 18px/1 system-ui,sans-serif}.ad-close{font-size:27px;cursor:pointer}
+  .ad-creative{position:relative;display:grid;place-items:center;min-height:0}.ad-orbit{position:relative;width:min(70vw,300px);aspect-ratio:1;
+    border:2px solid rgba(255,255,255,.14);border-radius:50%;animation:ad-spin 7s linear infinite}
+  .ad-shape{position:absolute;width:30%;aspect-ratio:1;border-radius:32%;box-shadow:0 16px 40px rgba(0,0,0,.22)}
+  .ad-shape.a{left:4%;top:15%;background:#EFC978;animation:ad-float 1.9s ease-in-out infinite alternate}
+  .ad-shape.b{right:2%;top:38%;border-radius:50%;background:#8FB8DE;animation:ad-float 2.3s .3s ease-in-out infinite alternate}
+  .ad-shape.c{left:35%;bottom:-4%;background:#EDA0A8;transform:rotate(45deg);animation:ad-float 2.1s .6s ease-in-out infinite alternate}
+  .ad-logo{position:absolute;inset:28%;width:44%;height:44%;border-radius:26%;box-shadow:0 18px 45px rgba(0,0,0,.24)}
+  .remove-ads{justify-self:center;border:1px solid rgba(255,255,255,.24);border-radius:999px;padding:12px 18px;
+    background:rgba(255,255,255,.12);color:white;font:750 13px/1 system-ui,sans-serif;cursor:pointer}
+  .parent-sheet{position:fixed;z-index:24;inset:0;display:grid;place-items:center;padding:18px;background:rgba(25,39,34,.72);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);touch-action:manipulation}
+  .parent-card{width:min(100%,390px);box-sizing:border-box;padding:26px 22px;border-radius:28px;background:#F8F2E7;color:#43534B;
+    text-align:center;box-shadow:0 22px 70px rgba(0,0,0,.28)}
+  .parent-card h1{margin:0 0 8px;font-size:22px}.parent-card p{margin:0 0 16px;font:500 14px/1.45 system-ui,sans-serif}
+  .parent-card input{width:100%;box-sizing:border-box;margin-bottom:12px;border:2px solid rgba(67,83,75,.15);border-radius:16px;
+    padding:13px;text-align:center;background:white;color:#43534B;font:800 22px/1 system-ui,sans-serif;outline:none}
+  .parent-actions{display:grid;gap:9px}
+  @keyframes ad-spin{to{transform:rotate(360deg)}}@keyframes ad-float{to{translate:0 -18px;rotate:10deg}}
   .toast{position:fixed;z-index:9;top:calc(var(--safe-top) + 14px);left:50%;transform:translateX(-50%);
     max-width:calc(100% - 36px);padding:10px 14px;border-radius:999px;background:rgba(67,83,75,.92);color:white;
     font:650 13px/1.2 system-ui,sans-serif;box-shadow:0 8px 26px rgba(40,56,48,.22);pointer-events:none}
-  @media (prefers-reduced-motion:reduce){.install-button{transition:none}}
+  @media (prefers-reduced-motion:reduce){.install-button{transition:none}.ad-orbit,.ad-shape{animation:none}}
+  @media (orientation:landscape){.home-button{top:calc(var(--safe-top) + 14px);bottom:auto}}
 </style>
 </head>
 <body>
@@ -101,6 +130,20 @@
     </div>
   </div>
 </section>
+<button id="homeButton" class="home-button" type="button" hidden aria-label="Ana menüye dön">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3.5 11.2 12 4l8.5 7.2M6 10v9h4.2v-5h3.6v5H18v-9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<section id="demoAd" class="demo-ad" hidden aria-modal="true" role="dialog" aria-label="Demo reklam">
+  <div class="ad-top"><span class="ad-badge">DEMO REKLAM</span><span id="adTimer" class="ad-timer">8</span><button id="adClose" class="ad-close" type="button" hidden aria-label="Reklamı kapat">×</button></div>
+  <div class="ad-creative" aria-hidden="true"><div class="ad-orbit"><i class="ad-shape a"></i><i class="ad-shape b"></i><i class="ad-shape c"></i></div><img class="ad-logo" src="icons/icon-192.png" alt=""></div>
+  <button id="removeAds" class="remove-ads" type="button">Reklamları kaldır · Demo</button>
+</section>
+<section id="parentSheet" class="parent-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="parentTitle">
+  <div class="parent-card"><h1 id="parentTitle">Ebeveyn alanı</h1><p id="parentPrompt"></p>
+    <input id="parentAnswer" type="number" inputmode="numeric" autocomplete="off" aria-label="İşlemin cevabı">
+    <div class="parent-actions"><button id="parentConfirm" class="action-button" type="button">Devam et</button><button id="parentCancel" class="action-button secondary" type="button">Vazgeç</button></div>
+  </div>
+</section>
 <div id="statusToast" class="toast" role="status" aria-live="polite" hidden></div>
 <script>
 "use strict";
@@ -123,15 +166,17 @@ const isAnimal = s => ANIMALS.indexOf(s) >= 0;
 
 const REDUCED = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const STORAGE_KEY='evisgame-progress-v1';
+const ADS_DEMO_KEY='evisgame-ads-disabled-demo-v1';
 function loadProgress(){
   try{
     const value=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');
-    return value && Number.isFinite(value.levelIndex) && Number.isFinite(value.stars) ? value : {levelIndex:0,stars:0};
-  }catch(e){ return {levelIndex:0,stars:0}; }
+    return value && Number.isFinite(value.levelIndex) && Number.isFinite(value.stars) ? value : {levelIndex:0,stars:0,modeRounds:{}};
+  }catch(e){ return {levelIndex:0,stars:0,modeRounds:{}}; }
 }
 const savedProgress=loadProgress();
+let modeRounds=savedProgress.modeRounds&&typeof savedProgress.modeRounds==='object'?savedProgress.modeRounds:{};
 function saveProgress(){
-  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify({levelIndex,stars,updatedAt:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify({levelIndex,stars,modeRounds,updatedAt:Date.now()})); }catch(e){}
 }
 
 /* ---------------- yardımcı ---------------- */
@@ -291,6 +336,29 @@ function shapePath(c,shape,s){
 const dotLayout=(n,s)=> n===1?[[0,0]] : n===2?[[-s*.42,0],[s*.42,0]]
   : n===3?[[-s*.62,0],[0,0],[s*.62,0]] : [[-s*.60,-s*.34],[s*.60,-s*.34],[-s*.60,s*.34],[s*.60,s*.34]];
 
+const DIGIT_PATHS={
+  0:[[[.50,.15],[.34,.20],[.27,.42],[.28,.68],[.40,.82],[.60,.82],[.72,.68],[.73,.40],[.65,.21],[.50,.15]]],
+  1:[[[.34,.29],[.51,.16],[.54,.16],[.54,.80]],[[.35,.80],[.72,.80]]],
+  2:[[[.29,.31],[.37,.18],[.55,.15],[.70,.24],[.71,.38],[.62,.51],[.31,.78],[.73,.78]]],
+  3:[[[.31,.24],[.45,.15],[.62,.18],[.70,.30],[.65,.44],[.51,.49],[.66,.51],[.73,.64],[.68,.77],[.54,.83],[.35,.78]]],
+  4:[[[.65,.80],[.65,.16]],[[.64,.18],[.28,.59],[.76,.59]]],
+  5:[[[.70,.17],[.36,.17],[.32,.47],[.55,.45],[.69,.55],[.70,.70],[.60,.81],[.42,.82],[.30,.75]]],
+  6:[[[.66,.20],[.50,.16],[.36,.27],[.29,.48],[.31,.69],[.43,.81],[.60,.81],[.70,.70],[.69,.55],[.58,.46],[.39,.49],[.30,.60]]],
+  7:[[[.29,.18],[.73,.18],[.59,.42],[.47,.80]]],
+  8:[[[.50,.14],[.35,.20],[.32,.35],[.40,.47],[.60,.49],[.70,.61],[.67,.76],[.55,.84],[.39,.81],[.30,.70],[.33,.56],[.45,.48],[.62,.42],[.69,.29],[.63,.18],[.50,.14]]],
+  9:[[[.69,.47],[.59,.55],[.40,.53],[.31,.41],[.32,.25],[.43,.16],[.61,.18],[.70,.31],[.70,.58],[.62,.76],[.48,.84],[.34,.80]]]
+};
+function pointOnDigit(digit,t){
+  const paths=DIGIT_PATHS[digit]||DIGIT_PATHS[1],segments=[]; let total=0;
+  for(const path of paths) for(let i=1;i<path.length;i++){
+    const a=path[i-1],b=path[i],len=Math.hypot(b[0]-a[0],b[1]-a[1]); segments.push({a,b,len}); total+=len;
+  }
+  let at=((t%1)+1)%1*total;
+  for(const segment of segments){ if(at<=segment.len){ const q=segment.len?at/segment.len:0;
+      return {x:segment.a[0]+(segment.b[0]-segment.a[0])*q,y:segment.a[1]+(segment.b[1]-segment.a[1])*q}; } at-=segment.len; }
+  const p=paths[0][0]; return {x:p[0],y:p[1]};
+}
+
 /* ---------------- parçacıklar ---------------- */
 const parts=[];
 function burst(x,y,color,n){
@@ -393,6 +461,7 @@ function drawMascot(time){
 const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
+let activeType=null;
 
 function pairCount(i){ return i<2?2 : i<9?3 : 4; }
 function resetPhase(){ phase='intro'; phaseT=0; idleT=0; hintOn=false; waved=[]; selected=null; }
@@ -425,7 +494,7 @@ function buildPopLevel(idx){
 
 function buildNumberDrawingLevel(idx){
   const numbers=[1,2,3,0,4,5,6,7,8,9];
-  const cycle=Math.floor(idx/TYPES.length), digit=numbers[cycle%numbers.length];
+  const digit=numbers[idx%numbers.length];
   level={type:'numberdraw',targets:[],pieces:[],drawGame:{digit,strokes:[],active:null,pointerId:null,
     box:{x:0,y:0,w:0,h:0},clearX:0,buttonY:0,buttonR:0,pulse:0,feedback:'idle',
     autoCheckAt:0,retryAt:0,transformStart:0,transformDuration:REDUCED?0.18:0.95,score:0,pathLength:0},cheered:false};
@@ -434,11 +503,12 @@ function buildNumberDrawingLevel(idx){
 }
 
 function buildLevel(idx){
-  const type=TYPES[idx%TYPES.length];
-  const n=pairCount(idx);
-  if(type==='memory'){ buildMemoryLevel(idx,n); return; }
-  if(type==='pop'){ buildPopLevel(idx); return; }
-  if(type==='numberdraw'){ buildNumberDrawingLevel(idx); return; }
+  const type=activeType||TYPES[idx%TYPES.length];
+  const round=activeType?Math.max(0,modeRounds[type]|0):idx;
+  const n=pairCount(round);
+  if(type==='memory'){ buildMemoryLevel(round,n); return; }
+  if(type==='pop'){ buildPopLevel(round); return; }
+  if(type==='numberdraw'){ buildNumberDrawingLevel(round); return; }
   const cols=shuffle(PALETTE.slice()).slice(0,Math.max(n,3));
   const defs=[];
 
@@ -480,6 +550,7 @@ function layout(){
     g.buttonR=Math.max(24,Math.min(31,usableH*0.043));
     g.clearX=W/2; g.buttonY=safe.top+usableH*0.865;
     unit=Math.min(boxW,boxH)*0.14;
+    prepareNumberMask(g);
     return;
   }
   if(level.type==='memory'){
@@ -638,6 +709,31 @@ function drawDigitGlyph(c,digit,w,h,color,shadowBlur){
   if(shadowBlur){ c.shadowColor=color; c.shadowBlur=shadowBlur; }
   c.fillText(String(digit),w/2,h*0.51); c.restore();
 }
+function prepareNumberMask(g){
+  const w=180,h=220,c=document.createElement('canvas'); c.width=w;c.height=h;
+  drawDigitGlyph(c.getContext('2d'),g.digit,w,h,'#fff',5);
+  g.inputMask={w,h,data:c.getContext('2d').getImageData(0,0,w,h).data};
+  g.strokeCanvas=document.createElement('canvas');g.strokeCanvas.width=Math.max(1,Math.round(g.box.w));g.strokeCanvas.height=Math.max(1,Math.round(g.box.h));
+}
+function numberPointAllowed(g,p){
+  const m=g.inputMask,b=g.box;if(!m||!b.w||!b.h) return false;
+  const x=clamp(Math.round(p.x/b.w*(m.w-1)),0,m.w-1),y=clamp(Math.round(p.y/b.h*(m.h-1)),0,m.h-1);
+  return m.data[(y*m.w+x)*4+3]>8;
+}
+function numberSegmentAllowed(g,a,b){
+  const dist=Math.hypot(b.x-a.x,b.y-a.y),steps=Math.max(1,Math.ceil(dist/3));
+  for(let i=1;i<=steps;i++){const t=i/steps;if(!numberPointAllowed(g,{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}))return false;}
+  return true;
+}
+function renderNumberStrokes(g,retry){
+  const c=g.strokeCanvas,b=g.box,q=c.getContext('2d');q.setTransform(1,0,0,1,0,0);q.clearRect(0,0,c.width,c.height);
+  q.setTransform(c.width/b.w,0,0,c.height/b.h,0,0);q.strokeStyle=retry?'rgba(221,111,126,.92)':'rgba(67,83,75,.92)';
+  q.lineCap='round';q.lineJoin='round';q.lineWidth=Math.max(17,Math.min(b.w,b.h)*.065);
+  for(const stroke of g.strokes){if(!stroke.length)continue;q.beginPath();q.moveTo(stroke[0].x,stroke[0].y);
+    for(let i=1;i<stroke.length;i++)q.lineTo(stroke[i].x,stroke[i].y);if(stroke.length===1)q.lineTo(stroke[0].x+.1,stroke[0].y+.1);q.stroke();}
+  q.globalCompositeOperation='destination-in';drawDigitGlyph(q,g.digit,b.w,b.h,'#fff',5);q.globalCompositeOperation='source-over';
+  q.setTransform(1,0,0,1,0,0);return c;
+}
 function drawNumberMode(time){
   const g=level.drawGame,b=g.box,fade=1-(level.fade||0);
   const transforming=g.feedback==='transform',complete=g.feedback==='success';
@@ -650,6 +746,11 @@ function drawNumberMode(time){
   ctx.save(); ctx.beginPath(); roundRectPath(ctx,b.x,b.y,b.w,b.h,b.w*0.09); ctx.clip(); ctx.translate(b.x,b.y);
   const retry=g.feedback==='retry', guideAlpha=(retry?0.20+Math.sin(time*15)*0.08:0.13+g.pulse*0.10)*(1-morph);
   drawDigitGlyph(ctx,g.digit,b.w,b.h,retry?`rgba(237,160,168,${guideAlpha})`:`rgba(67,83,75,${guideAlpha})`,0);
+  if(!transforming&&!complete&&!g.strokes.some(s=>s.length>1)){
+    const hp=pointOnDigit(g.digit,time*0.18),hx=hp.x*b.w,hy=hp.y*b.h;
+    ctx.save();ctx.globalAlpha=fade*(0.55+Math.sin(time*4)*0.14);ctx.shadowColor='#86BFA8';ctx.shadowBlur=16;
+    ctx.beginPath();ctx.arc(hx,hy,Math.max(7,Math.min(b.w,b.h)*0.026),0,Math.PI*2);ctx.fillStyle='#86BFA8';ctx.fill();ctx.restore();
+  }
   if(morph>0){
     ctx.save(); ctx.globalAlpha=fade*morph;
     const scale=0.92+0.08*morph+(REDUCED?0:Math.sin(morph*Math.PI)*0.035);
@@ -657,13 +758,7 @@ function drawNumberMode(time){
     drawDigitGlyph(ctx,g.digit,b.w,b.h,'#4B9A79',0); ctx.restore();
   }
   ctx.globalAlpha=fade*(1-morph);
-  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(17,Math.min(b.w,b.h)*0.065);
-  ctx.strokeStyle=retry?'rgba(221,111,126,0.88)':'rgba(67,83,75,0.90)';
-  for(const stroke of g.strokes){
-    if(stroke.length<1) continue; ctx.beginPath(); ctx.moveTo(stroke[0].x,stroke[0].y);
-    for(let i=1;i<stroke.length;i++) ctx.lineTo(stroke[i].x,stroke[i].y);
-    if(stroke.length===1) ctx.lineTo(stroke[0].x+0.1,stroke[0].y+0.1); ctx.stroke();
-  }
+  ctx.drawImage(renderNumberStrokes(g,retry),0,0,b.w,b.h);
   ctx.restore();
 
   ctx.save(); ctx.globalAlpha=fade*(1-morph);
@@ -700,7 +795,7 @@ function drawTopBar(time){
 }
 
 /* ---------------- açılış ---------------- */
-let started=false;
+let started=false,appView='start';
 function drawStart(time){
   ctx.drawImage(bgCanvas,0,0,W,H);
   const usableH=H-safe.top-safe.bottom;
@@ -733,6 +828,76 @@ function drawStart(time){
   ctx.beginPath(); ctx.arc(W/2,playY,pr,0,Math.PI*2); ctx.fillStyle=CREAM; ctx.fill();
   ctx.shadowColor='transparent'; ctx.fillStyle=INK; ctx.beginPath();
   ctx.moveTo(W/2-pr*0.20,playY-pr*0.34); ctx.lineTo(W/2+pr*0.38,playY); ctx.lineTo(W/2-pr*0.20,playY+pr*0.34); ctx.closePath(); ctx.fill();
+}
+
+/* ---------------- yazısız animasyonlu oyun menüsü ---------------- */
+const MAIN_MENU=['match','memory','pop','numberdraw'];
+const MATCH_MENU=['color','shape','size','count','animal'];
+function menuCards(kinds){
+  const usableH=H-safe.top-safe.bottom,landscape=W>H*1.25,cols=landscape?(kinds.length>4?3:4):2;
+  const rows=Math.ceil(kinds.length/cols),gap=Math.max(12,Math.min(W,usableH)*0.028);
+  const maxW=Math.min(174,(W-safe.left-safe.right-gap*(cols+1))/cols),top=safe.top+usableH*(appView==='matchMenu'?0.245:0.255);
+  const available=usableH*(appView==='matchMenu'?0.64:0.60),h=Math.min(maxW*1.02,(available-gap*(rows-1))/rows);
+  const totalH=rows*h+(rows-1)*gap,startY=top+Math.max(0,(available-totalH)/2);
+  return kinds.map((kind,i)=>{const row=(i/cols)|0,col=i%cols,rowCount=Math.min(cols,kinds.length-row*cols);
+    const x=W/2+(col-(rowCount-1)/2)*(maxW+gap)-maxW/2;
+    return {kind,x,y:startY+row*(h+gap),w:maxW,h};});
+}
+function drawMiniShape(shape,x,y,s,color,alpha=1){
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);shapePath(ctx,shape,s);ctx.fillStyle=color;ctx.fill();
+  if(isAnimal(shape)) animalFace(ctx,shape,s,0);ctx.restore();
+}
+function drawMenuCard(card,time){
+  const {x,y,w,h,kind}=card,cx=x+w/2,cy=y+h/2,s=Math.min(w,h),float=REDUCED?0:Math.sin(time*2+kind.length)*3;
+  const tint={match:'#FFF4D8',memory:'#E9E0F1',pop:'#DDEDFC',numberdraw:'#DDF0E7',color:'#FBE4D9',shape:'#E3EDF7',size:'#E6F1E9',count:'#FFF1D2',animal:'#F3E2E7'}[kind]||CREAM;
+  ctx.save();ctx.shadowColor='rgba(52,71,61,.14)';ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+  ctx.beginPath();roundRectPath(ctx,x,y,w,h,s*.12);ctx.fillStyle=tint;ctx.fill();ctx.shadowColor='transparent';
+  ctx.beginPath();roundRectPath(ctx,x,y,w,h,s*.12);ctx.clip();ctx.translate(0,float);
+  if(kind==='match'||kind==='color'){
+    const q=(Math.sin(time*1.7)+1)/2,yy=cy+s*(.18-q*.28),sh=kind==='color'?'circle':'star';
+    for(const sg of [-1,1]){ctx.globalAlpha=.16;ctx.beginPath();ctx.arc(cx+sg*s*.22,cy-s*.20,s*.16,0,Math.PI*2);ctx.fillStyle=sg<0?PALETTE[0]:PALETTE[3];ctx.fill();ctx.globalAlpha=1;
+      drawMiniShape(sh,cx+sg*s*.22,yy,s*.105,sg<0?PALETTE[0]:PALETTE[3]);}
+  }else if(kind==='memory'){
+    for(const sg of [-1,1]){const fx=Math.max(.08,Math.abs(Math.cos(time*1.45+sg*.28)));ctx.save();ctx.translate(cx+sg*s*.22,cy);ctx.scale(fx,1);
+      ctx.beginPath();roundRectPath(ctx,-s*.15,-s*.22,s*.30,s*.44,s*.06);ctx.fillStyle=fx<.28?CREAM:'#86BFA8';ctx.fill();
+      if(fx<.28) drawMiniShape('heart',0,0,s*.075,PALETTE[5]);ctx.restore();}
+  }else if(kind==='pop'){
+    for(let i=0;i<3;i++){const a=time*(.7+i*.08)+i*2.1,bx=cx+Math.cos(a)*s*.24,by=cy+Math.sin(a*1.3)*s*.21;
+      ctx.globalAlpha=.58;ctx.beginPath();ctx.arc(bx,by,s*(.11+i*.012),0,7);ctx.fillStyle=PALETTE[(i+2)%PALETTE.length];ctx.fill();ctx.globalAlpha=1;}
+    drawMiniShape('star',cx,cy,s*.09,'#EFC978');
+  }else if(kind==='numberdraw'){
+    ctx.save();ctx.globalAlpha=.20;ctx.translate(x+w*.15,y+h*.12);drawDigitGlyph(ctx,3,w*.70,h*.74,'#43534B',0);ctx.restore();
+    const p=pointOnDigit(3,time*.18);ctx.save();ctx.shadowColor='#4B9A79';ctx.shadowBlur=12;ctx.beginPath();ctx.arc(x+p.x*w,y+p.y*h,s*.045,0,7);ctx.fillStyle='#4B9A79';ctx.fill();ctx.restore();
+  }else if(kind==='shape'){
+    drawMiniShape('circle',cx-s*.20,cy,s*.13,PALETTE[2]);drawMiniShape('star',cx+s*.20,cy,s*.14,PALETTE[1]);
+  }else if(kind==='size'){
+    drawMiniShape('circle',cx-s*.20,cy+s*.07,s*.09,PALETTE[3]);drawMiniShape('circle',cx+s*.15,cy,s*.20,PALETTE[3],.82);
+  }else if(kind==='count'){
+    ctx.beginPath();roundRectPath(ctx,cx-s*.27,cy-s*.19,s*.54,s*.38,s*.08);ctx.fillStyle=CREAM;ctx.fill();
+    for(const [dx,dy] of dotLayout(3,s*.19)){ctx.beginPath();ctx.arc(cx+dx,cy+dy,s*.035,0,7);ctx.fillStyle=PALETTE[0];ctx.fill();}
+  }else if(kind==='animal'){
+    drawMiniShape('cat',cx-s*.19,cy,s*.13,PALETTE[5]);drawMiniShape('frog',cx+s*.19,cy,s*.13,PALETTE[2]);
+  }
+  ctx.restore();
+}
+function drawGameMenu(time){
+  ctx.drawImage(bgCanvas,0,0,W,H);updateMascot(1/60);mascotLook(W/2,H*.62);drawMascot(time);
+  const cards=menuCards(appView==='matchMenu'?MATCH_MENU:MAIN_MENU);cards.forEach(card=>drawMenuCard(card,time));drawParts();
+}
+function openMenu(page='menu'){
+  cancelAllPointers();parts.length=0;level=null;activeType=null;appView=page;phase='intro';phaseT=0;
+  resetButton.hidden=true;homeButton.hidden=page==='menu';
+  cvs.setAttribute('aria-label',page==='matchMenu'?'Eşleştirme oyunları menüsü. Animasyonlu oyun kartlarından birini seçin.':'EvisGame ana menüsü. Animasyonlu oyun kategorilerinden birini seçin.');
+}
+function beginMode(type){
+  activeType=type;appView='game';resetButton.hidden=false;homeButton.hidden=false;buildLevel(levelIndex);
+  cvs.setAttribute('aria-label','Seçilen EvisGame oyunu devam ediyor.');sndSel();
+}
+function handleMenuTap(x,y){
+  const cards=menuCards(appView==='matchMenu'?MATCH_MENU:MAIN_MENU),hit=cards.find(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h);
+  if(!hit) return;
+  if(hit.kind==='match'){appView='matchMenu';homeButton.hidden=false;cvs.setAttribute('aria-label','Eşleştirme oyunları menüsü.');sndSel();return;}
+  beginMode(hit.kind);
 }
 
 /* ---------------- girdi (çok parmak + dokun-yerleştir) ---------------- */
@@ -861,13 +1026,21 @@ function handleNumberDown(e){
   if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h||g.pointerId!==null) return;
   if(g.feedback==='retry') clearNumberDrawing(false);
   g.autoCheckAt=0;
-  const stroke=[numberPoint(e)]; g.strokes.push(stroke); g.active=stroke; g.pointerId=e.pointerId; g.feedback='drawing';
+  const point=numberPoint(e),stroke=numberPointAllowed(g,point)?[point]:null;
+  if(stroke) g.strokes.push(stroke); else g.pulse=0.55;
+  g.active=stroke; g.pointerId=e.pointerId; g.feedback='drawing';
   sndPick(); try{cvs.setPointerCapture(e.pointerId);}catch(err){}
 }
 function handleNumberMove(e){
-  const g=level.drawGame; if(g.pointerId!==e.pointerId||!g.active) return false;
-  e.preventDefault(); const point=numberPoint(e),last=g.active[g.active.length-1],dist=Math.hypot(point.x-last.x,point.y-last.y);
-  if(dist>=2){ g.active.push(point); g.pathLength+=dist; mascotLook(e.clientX,e.clientY); }
+  const g=level.drawGame; if(g.pointerId!==e.pointerId) return false;
+  e.preventDefault(); const point=numberPoint(e);
+  if(!numberPointAllowed(g,point)){ g.active=null; return true; }
+  if(!g.active){ g.active=[point]; g.strokes.push(g.active); return true; }
+  const last=g.active[g.active.length-1],dist=Math.hypot(point.x-last.x,point.y-last.y);
+  if(dist>=2){
+    if(!numberSegmentAllowed(g,last,point)){g.active=[point];g.strokes.push(g.active);return true;}
+    g.active.push(point); g.pathLength+=dist; mascotLook(e.clientX,e.clientY);
+  }
   return true;
 }
 function handleNumberUp(e){
@@ -899,8 +1072,7 @@ function autoPlace(p){ const t=slotOf(p); if(t && !t.filled) place(p,t); }
 function startGame(){
   if(started) return;
   audioInit(); if(AC&&AC.state==='suspended') AC.resume();
-  started=true; installButton.hidden=true; resetButton.hidden=false; goFullscreen(); keepAwake(); buildLevel(levelIndex);
-  cvs.setAttribute('aria-label','EvisGame eşleştirme oyunu devam ediyor.');
+  started=true; installButton.hidden=true; goFullscreen(); keepAwake(); openMenu('menu');
   try{ cvs.focus({preventScroll:true}); }catch(e){ cvs.focus(); }
   note(PENTA[0],0,0.4); note(PENTA[3],0.09,0.35);
 }
@@ -910,6 +1082,8 @@ function onDown(e){
   audioInit(); if(AC&&AC.state==='suspended') AC.resume();
   const x=e.clientX, y=e.clientY; idleT=0; hintOn=false;
   if(!started){ startGame(); return; }
+  if(appView==='menu'||appView==='matchMenu'){ handleMenuTap(x,y); return; }
+  if(appView!=='game'||!level) return;
   if(phase!=='play') return;
   if(level.type==='memory'){ handleMemoryTap(x,y); return; }
   if(level.type==='pop'){ handlePopTap(x,y); return; }
@@ -929,7 +1103,7 @@ function onDown(e){
   try{ cvs.setPointerCapture(e.pointerId); }catch(err){}
 }
 function onMove(e){
-  if(started&&level&&level.type==='numberdraw'&&handleNumberMove(e)) return;
+  if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberMove(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   e.preventDefault();
   d.x=e.clientX; d.y=e.clientY;
@@ -938,7 +1112,7 @@ function onMove(e){
   idleT=0;
 }
 function onUp(e){
-  if(started&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
+  if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   d.x=e.clientX; d.y=e.clientY;
   d.moved=Math.max(d.moved,Math.hypot(d.x-d.x0,d.y-d.y0));
@@ -974,7 +1148,7 @@ function onUp(e){
   }
 }
 function onCancel(e){
-  if(started&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
+  if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   ptrs.delete(e.pointerId);
   if(d.p){ d.p.drag=false; d.p.wig=0.25; }
@@ -993,6 +1167,7 @@ cvs.addEventListener('keydown',e=>{
   if(!['Enter',' ','ArrowLeft','ArrowRight','Backspace','Delete'].includes(e.key)) return;
   e.preventDefault();
   if(!started){ startGame(); return; }
+  if(appView!=='game'||!level) return;
   if(phase!=='play') return;
   if(level.type==='numberdraw'){
     if(e.key==='Backspace'||e.key==='Delete') clearNumberDrawing(true);
@@ -1047,10 +1222,47 @@ const closeReset=document.getElementById('closeReset');
 const restartLevelButton=document.getElementById('restartLevel');
 const resetProgressButton=document.getElementById('resetProgress');
 const cancelReset=document.getElementById('cancelReset');
+const homeButton=document.getElementById('homeButton');
+const demoAd=document.getElementById('demoAd');
+const adTimer=document.getElementById('adTimer');
+const adClose=document.getElementById('adClose');
+const removeAdsButton=document.getElementById('removeAds');
+const parentSheet=document.getElementById('parentSheet');
+const parentPrompt=document.getElementById('parentPrompt');
+const parentAnswer=document.getElementById('parentAnswer');
+const parentConfirm=document.getElementById('parentConfirm');
+const parentCancel=document.getElementById('parentCancel');
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isMobile=/Android|iPad|iPhone|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints>1;
 const isStandalone=matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
 let deferredInstall=null, toastTimer=0;
+let adsDisabled=false;
+try{adsDisabled=localStorage.getItem(ADS_DEMO_KEY)==='1';}catch(e){}
+let gamesSinceAd=0,nextAdAt=3+((Math.random()*3)|0),adTick=0,parentExpected=0,parentStage='gate';
+
+function closeDemoAd(){
+  clearInterval(adTick);adTick=0;demoAd.hidden=true;parentSheet.hidden=true;
+  if(appView==='game'&&activeType) buildLevel(levelIndex);
+}
+function showDemoAd(){
+  const duration=5+((Math.random()*6)|0);let left=duration;
+  demoAd.hidden=false;adClose.hidden=true;adTimer.hidden=false;adTimer.textContent=String(left);
+  clearInterval(adTick);adTick=setInterval(()=>{left--;
+    if(left>0){adTimer.textContent=String(left);return;}
+    clearInterval(adTick);adTick=0;adTimer.hidden=true;adClose.hidden=false;
+  },1000);
+}
+function openParentGate(){
+  const a=4+((Math.random()*6)|0),b=3+((Math.random()*7)|0);parentExpected=a+b;parentStage='gate';
+  parentPrompt.textContent=`Devam etmek için ${a} + ${b} işlemini çözün.`;parentAnswer.hidden=false;parentAnswer.value='';
+  parentConfirm.textContent='Devam et';parentSheet.hidden=false;setTimeout(()=>parentAnswer.focus(),80);
+}
+function finishCompletedLevel(){
+  const completedType=level.type;levelIndex++;modeRounds[completedType]=Math.max(0,modeRounds[completedType]|0)+1;saveProgress();
+  gamesSinceAd++;
+  if(!adsDisabled&&gamesSinceAd>=nextAdAt){gamesSinceAd=0;nextAdAt=3+((Math.random()*3)|0);showDemoAd();return;}
+  buildLevel(levelIndex);
+}
 
 function showToast(message){
   clearTimeout(toastTimer); statusToast.textContent=message; statusToast.hidden=false;
@@ -1078,11 +1290,26 @@ resetButton.addEventListener('click',e=>{ e.stopPropagation(); resetSheet.hidden
 closeReset.addEventListener('click',()=>{ resetSheet.hidden=true; });
 cancelReset.addEventListener('click',()=>{ resetSheet.hidden=true; });
 resetSheet.addEventListener('click',e=>{ if(e.target===resetSheet) resetSheet.hidden=true; });
+homeButton.addEventListener('pointerdown',e=>e.stopPropagation());
+homeButton.addEventListener('click',e=>{ e.stopPropagation(); resetSheet.hidden=true; openMenu('menu'); });
+demoAd.addEventListener('pointerdown',e=>e.stopPropagation());
+adClose.addEventListener('click',closeDemoAd);
+removeAdsButton.addEventListener('click',openParentGate);
+parentCancel.addEventListener('click',()=>{parentSheet.hidden=true;});
+parentConfirm.addEventListener('click',()=>{
+  if(parentStage==='gate'){
+    if(Number(parentAnswer.value)!==parentExpected){parentAnswer.value='';parentPrompt.textContent='Tekrar deneyin.';buzz(6);return;}
+    parentStage='purchase';parentAnswer.hidden=true;parentPrompt.textContent='Demo ödeme ekranıdır. Gerçek ücret alınmaz.';
+    parentConfirm.textContent='Demo satın almayı tamamla';return;
+  }
+  adsDisabled=true;try{localStorage.setItem(ADS_DEMO_KEY,'1');}catch(e){}
+  showToast('Demo reklamsız sürüm etkin');closeDemoAd();
+});
 restartLevelButton.addEventListener('click',()=>{
   cancelAllPointers(); parts.length=0; buildLevel(levelIndex); resetSheet.hidden=true; showToast('Bölüm yeniden başladı');
 });
 resetProgressButton.addEventListener('click',()=>{
-  cancelAllPointers(); parts.length=0; levelIndex=0; stars=0;
+  cancelAllPointers(); parts.length=0; levelIndex=0; stars=0; modeRounds={};
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
   buildLevel(0); resetSheet.hidden=true; showToast('İlerleme sıfırlandı');
 });
@@ -1105,6 +1332,8 @@ function frame(now){
   updateParts(dt);
 
   if(!started){ drawStart(time); drawParts(); requestAnimationFrame(frame); return; }
+  if(appView==='menu'||appView==='matchMenu'){ drawGameMenu(time); requestAnimationFrame(frame); return; }
+  if(appView!=='game'||!level){ requestAnimationFrame(frame); return; }
   phaseT+=dt;
 
   /* --- faz --- */
@@ -1144,7 +1373,7 @@ function frame(now){
       level.fade=clamp((level.fade||0)+dt*1.8,0,1);
       level.pieces.forEach((p,i)=>{ p.out=clamp(p.out+dt*(1.3+i*0.12),0,1); });
     }
-    if(phaseT>3.1){ levelIndex++; saveProgress(); buildLevel(levelIndex); }
+    if(phaseT>3.1&&!level.advanced){level.advanced=true;finishCompletedLevel();}
   }
 
   /* --- farklı etkileşimli modlar --- */
