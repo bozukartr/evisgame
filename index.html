@@ -427,9 +427,9 @@ function buildNumberDrawingLevel(idx){
   const numbers=[1,2,3,0,4,5,6,7,8,9];
   const cycle=Math.floor(idx/TYPES.length), digit=numbers[cycle%numbers.length];
   level={type:'numberdraw',targets:[],pieces:[],drawGame:{digit,strokes:[],active:null,pointerId:null,
-    box:{x:0,y:0,w:0,h:0},clearX:0,checkX:0,buttonY:0,buttonR:0,pulse:0,feedback:'idle',
-    retryAt:0,score:0,pathLength:0},cheered:false};
-  cvs.setAttribute('aria-label',`${digit} sayısını çizme oyunu. Soluk rakamın üzerinden çizin ve onay düğmesine basın.`);
+    box:{x:0,y:0,w:0,h:0},clearX:0,buttonY:0,buttonR:0,pulse:0,feedback:'idle',
+    autoCheckAt:0,retryAt:0,transformStart:0,transformDuration:REDUCED?0.18:0.95,score:0,pathLength:0},cheered:false};
+  cvs.setAttribute('aria-label',`${digit} sayısını çizme oyunu. Soluk rakamın üzerinden çizin; oyun çizimi otomatik kontrol eder.`);
   layout(); resetPhase();
 }
 
@@ -478,7 +478,7 @@ function layout(){
     const boxH=Math.min(usableH*0.50,boxW*1.18);
     g.box={x:(W-boxW)/2,y:safe.top+usableH*0.285,w:boxW,h:boxH};
     g.buttonR=Math.max(24,Math.min(31,usableH*0.043));
-    g.clearX=W/2-g.buttonR*1.65; g.checkX=W/2+g.buttonR*1.65; g.buttonY=safe.top+usableH*0.865;
+    g.clearX=W/2; g.buttonY=safe.top+usableH*0.865;
     unit=Math.min(boxW,boxH)*0.14;
     return;
   }
@@ -640,15 +640,25 @@ function drawDigitGlyph(c,digit,w,h,color,shadowBlur){
 }
 function drawNumberMode(time){
   const g=level.drawGame,b=g.box,fade=1-(level.fade||0);
+  const transforming=g.feedback==='transform',complete=g.feedback==='success';
+  let morph=complete?1:transforming?clamp((time-g.transformStart)/g.transformDuration,0,1):0;
+  morph=morph*morph*(3-2*morph);
   ctx.save(); ctx.globalAlpha=fade;
   ctx.shadowColor='rgba(52,71,61,0.13)'; ctx.shadowBlur=20; ctx.shadowOffsetY=8;
   ctx.beginPath(); roundRectPath(ctx,b.x,b.y,b.w,b.h,b.w*0.09); ctx.fillStyle='rgba(248,242,231,0.82)'; ctx.fill();
   ctx.shadowColor='transparent'; ctx.lineWidth=2; ctx.strokeStyle='rgba(67,83,75,0.13)'; ctx.stroke();
   ctx.save(); ctx.beginPath(); roundRectPath(ctx,b.x,b.y,b.w,b.h,b.w*0.09); ctx.clip(); ctx.translate(b.x,b.y);
-  const retry=g.feedback==='retry', guideAlpha=retry?0.20+Math.sin(time*15)*0.08:0.13+g.pulse*0.10;
+  const retry=g.feedback==='retry', guideAlpha=(retry?0.20+Math.sin(time*15)*0.08:0.13+g.pulse*0.10)*(1-morph);
   drawDigitGlyph(ctx,g.digit,b.w,b.h,retry?`rgba(237,160,168,${guideAlpha})`:`rgba(67,83,75,${guideAlpha})`,0);
+  if(morph>0){
+    ctx.save(); ctx.globalAlpha=fade*morph;
+    const scale=0.92+0.08*morph+(REDUCED?0:Math.sin(morph*Math.PI)*0.035);
+    ctx.translate(b.w/2,b.h/2); ctx.scale(scale,scale); ctx.translate(-b.w/2,-b.h/2);
+    drawDigitGlyph(ctx,g.digit,b.w,b.h,'#4B9A79',0); ctx.restore();
+  }
+  ctx.globalAlpha=fade*(1-morph);
   ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(17,Math.min(b.w,b.h)*0.065);
-  ctx.strokeStyle=retry?'rgba(221,111,126,0.88)':g.feedback==='success'?'rgba(75,154,121,0.96)':'rgba(67,83,75,0.90)';
+  ctx.strokeStyle=retry?'rgba(221,111,126,0.88)':'rgba(67,83,75,0.90)';
   for(const stroke of g.strokes){
     if(stroke.length<1) continue; ctx.beginPath(); ctx.moveTo(stroke[0].x,stroke[0].y);
     for(let i=1;i<stroke.length;i++) ctx.lineTo(stroke[i].x,stroke[i].y);
@@ -656,18 +666,13 @@ function drawNumberMode(time){
   }
   ctx.restore();
 
-  const hasDrawing=g.strokes.some(s=>s.length>1);
-  for(const [x,kind] of [[g.clearX,'clear'],[g.checkX,'check']]){
-    ctx.save(); ctx.globalAlpha=kind==='check'&&!hasDrawing?0.38:1;
-    ctx.shadowColor='rgba(52,71,61,0.13)'; ctx.shadowBlur=12; ctx.shadowOffsetY=5;
-    ctx.beginPath(); ctx.arc(x,g.buttonY,g.buttonR,0,Math.PI*2); ctx.fillStyle=kind==='check'?'#86BFA8':CREAM; ctx.fill();
-    ctx.shadowColor='transparent'; ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2.4,g.buttonR*0.10); ctx.lineCap='round'; ctx.lineJoin='round';
-    ctx.beginPath();
-    if(kind==='check'){ ctx.moveTo(x-g.buttonR*0.38,g.buttonY); ctx.lineTo(x-g.buttonR*0.08,g.buttonY+g.buttonR*0.28); ctx.lineTo(x+g.buttonR*0.42,g.buttonY-g.buttonR*0.32); }
-    else { ctx.moveTo(x-g.buttonR*0.36,g.buttonY+g.buttonR*0.24); ctx.lineTo(x+g.buttonR*0.20,g.buttonY-g.buttonR*0.34);
-      ctx.lineTo(x+g.buttonR*0.42,g.buttonY-g.buttonR*0.12); ctx.lineTo(x-g.buttonR*0.14,g.buttonY+g.buttonR*0.46); }
-    ctx.stroke(); ctx.restore();
-  }
+  ctx.save(); ctx.globalAlpha=fade*(1-morph);
+  ctx.shadowColor='rgba(52,71,61,0.13)'; ctx.shadowBlur=12; ctx.shadowOffsetY=5;
+  ctx.beginPath(); ctx.arc(g.clearX,g.buttonY,g.buttonR,0,Math.PI*2); ctx.fillStyle=CREAM; ctx.fill();
+  ctx.shadowColor='transparent'; ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2.4,g.buttonR*0.10); ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.beginPath(); ctx.moveTo(g.clearX-g.buttonR*0.36,g.buttonY+g.buttonR*0.24);
+  ctx.lineTo(g.clearX+g.buttonR*0.20,g.buttonY-g.buttonR*0.34); ctx.lineTo(g.clearX+g.buttonR*0.42,g.buttonY-g.buttonR*0.12);
+  ctx.lineTo(g.clearX-g.buttonR*0.14,g.buttonY+g.buttonR*0.46); ctx.stroke(); ctx.restore();
   ctx.restore();
 }
 function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.16); }
@@ -795,7 +800,7 @@ function updatePop(dt){
 }
 function clearNumberDrawing(playSound){
   const g=level.drawGame; g.strokes=[]; g.active=null; g.pointerId=null; g.pathLength=0;
-  g.feedback='idle'; g.retryAt=0; g.score=0; if(playSound) sndSoft();
+  g.feedback='idle'; g.autoCheckAt=0; g.retryAt=0; g.transformStart=0; g.score=0; if(playSound) sndSoft();
 }
 function numberPoint(e){
   const b=level.drawGame.box;
@@ -839,21 +844,23 @@ function scoreNumberDrawing(){
 }
 function checkNumberDrawing(){
   const g=level.drawGame;
-  if(!g.strokes.some(s=>s.length>1)){ g.pulse=1; sndSoft(); return; }
+  g.autoCheckAt=0;
+  if(!g.strokes.some(s=>s.length>1)){ g.pulse=1; return; }
   const result=scoreNumberDrawing(); g.score=result.score;
   if(result.pass){
-    g.feedback='success'; phase='win'; phaseT=0; sndMatch(g.digit); buzz([18,35,18]);
-    burst(g.box.x+g.box.w/2,g.box.y+g.box.h/2,PALETTE[2],REDUCED?5:34); mascotCheer();
+    g.feedback='transform'; g.transformStart=time; sndMatch(g.digit); buzz([18,35,18]);
+    mascotLook(g.box.x+g.box.w/2,g.box.y+g.box.h/2); mas.bounce=0.7;
   }else{
     g.feedback='retry'; g.pulse=1; g.retryAt=time+0.85; sndSoft(); buzz(6); mascotLook(g.box.x+g.box.w/2,g.box.y+g.box.h/2);
   }
 }
 function handleNumberDown(e){
   const g=level.drawGame,b=g.box;
+  if(g.feedback==='transform'||g.feedback==='success') return;
   if(Math.hypot(e.clientX-g.clearX,e.clientY-g.buttonY)<g.buttonR*1.3){ clearNumberDrawing(true); return; }
-  if(Math.hypot(e.clientX-g.checkX,e.clientY-g.buttonY)<g.buttonR*1.3){ checkNumberDrawing(); return; }
   if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h||g.pointerId!==null) return;
   if(g.feedback==='retry') clearNumberDrawing(false);
+  g.autoCheckAt=0;
   const stroke=[numberPoint(e)]; g.strokes.push(stroke); g.active=stroke; g.pointerId=e.pointerId; g.feedback='drawing';
   sndPick(); try{cvs.setPointerCapture(e.pointerId);}catch(err){}
 }
@@ -866,11 +873,17 @@ function handleNumberMove(e){
 function handleNumberUp(e){
   const g=level.drawGame; if(g.pointerId!==e.pointerId) return false;
   g.active=null; g.pointerId=null; try{if(cvs.hasPointerCapture(e.pointerId))cvs.releasePointerCapture(e.pointerId);}catch(err){}
+  if(g.strokes.some(s=>s.length>1)) g.autoCheckAt=time+1.15;
   return true;
 }
 function updateNumberDrawing(dt){
   const g=level.drawGame; g.pulse=Math.max(0,g.pulse-dt*1.8);
+  if(phase==='play'&&g.autoCheckAt&&time>=g.autoCheckAt) checkNumberDrawing();
   if(g.retryAt&&time>=g.retryAt) clearNumberDrawing(false);
+  if(g.feedback==='transform'&&time-g.transformStart>=g.transformDuration){
+    g.feedback='success'; phase='win'; phaseT=0;
+    burst(g.box.x+g.box.w/2,g.box.y+g.box.h/2,PALETTE[2],REDUCED?5:34); mascotCheer();
+  }
 }
 
 function place(p,t){
@@ -982,8 +995,7 @@ cvs.addEventListener('keydown',e=>{
   if(!started){ startGame(); return; }
   if(phase!=='play') return;
   if(level.type==='numberdraw'){
-    if(e.key==='Enter'||e.key===' ') checkNumberDrawing();
-    else if(e.key==='Backspace'||e.key==='Delete') clearNumberDrawing(true);
+    if(e.key==='Backspace'||e.key==='Delete') clearNumberDrawing(true);
     return;
   }
   if(level.type==='memory'){

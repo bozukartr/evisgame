@@ -10,7 +10,7 @@ EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir mini oy
 - Safe-area, yüksek DPI, yatay/dikey ekran ve çoklu dokunma desteği
 - Sürükle-bırak ve dokun-yerleştir kontrolleri
 - Kart çevirme hafıza modu ve hareketli balonlara dokunma modu
-- 0–9 rakamlarını çoklu çizgiyle çizme; eksik ve taşan çizgileri birlikte değerlendiren toleranslı yakınlık kontrolü
+- 0–9 rakamlarını çoklu çizgiyle çizme; çizim bitince otomatik yakınlık kontrolü ve çizgiden temiz rakama dönüşüm animasyonu
 - Bölümü yeniden başlatma ve onaylı ilerleme sıfırlama kontrolleri
 - Ses, titreşim, azaltılmış hareket ve ekran kilidi uyumu
 - Yerel ilerleme kaydı; hiçbir kişisel veri veya ağ tabanlı analiz yok
