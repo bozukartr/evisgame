@@ -107,7 +107,7 @@
 
 /* ==========================================================================
    EŞLEŞTİR  ·  2-4 yaş  ·  tek dosya
-   7 oyun tipi: renk / hafıza / şekil / balon / boyut / sayı / hayvan
+   8 oyun tipi: renk / hafıza / şekil / balon / boyut / sayı çizme / sayı / hayvan
    Yazı yok · kaybetme yok · süre yok · ceza yok
    ========================================================================== */
 
@@ -390,7 +390,7 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','memory','shape','pop','size','count','animal'];
+const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 
@@ -423,11 +423,22 @@ function buildPopLevel(idx){
   resetPhase();
 }
 
+function buildNumberDrawingLevel(idx){
+  const numbers=[1,2,3,0,4,5,6,7,8,9];
+  const cycle=Math.floor(idx/TYPES.length), digit=numbers[cycle%numbers.length];
+  level={type:'numberdraw',targets:[],pieces:[],drawGame:{digit,strokes:[],active:null,pointerId:null,
+    box:{x:0,y:0,w:0,h:0},clearX:0,checkX:0,buttonY:0,buttonR:0,pulse:0,feedback:'idle',
+    retryAt:0,score:0,pathLength:0},cheered:false};
+  cvs.setAttribute('aria-label',`${digit} sayısını çizme oyunu. Soluk rakamın üzerinden çizin ve onay düğmesine basın.`);
+  layout(); resetPhase();
+}
+
 function buildLevel(idx){
   const type=TYPES[idx%TYPES.length];
   const n=pairCount(idx);
   if(type==='memory'){ buildMemoryLevel(idx,n); return; }
   if(type==='pop'){ buildPopLevel(idx); return; }
+  if(type==='numberdraw'){ buildNumberDrawingLevel(idx); return; }
   const cols=shuffle(PALETTE.slice()).slice(0,Math.max(n,3));
   const defs=[];
 
@@ -461,6 +472,16 @@ function buildLevel(idx){
 function layout(){
   if(!level) return;
   const usableH=H-safe.top-safe.bottom;
+  if(level.type==='numberdraw'){
+    const g=level.drawGame;
+    const boxW=Math.min(W-safe.left-safe.right-56,usableH*0.68,360);
+    const boxH=Math.min(usableH*0.50,boxW*1.18);
+    g.box={x:(W-boxW)/2,y:safe.top+usableH*0.285,w:boxW,h:boxH};
+    g.buttonR=Math.max(24,Math.min(31,usableH*0.043));
+    g.clearX=W/2-g.buttonR*1.65; g.checkX=W/2+g.buttonR*1.65; g.buttonY=safe.top+usableH*0.865;
+    unit=Math.min(boxW,boxH)*0.14;
+    return;
+  }
   if(level.type==='memory'){
     const count=level.pieces.length;
     const cols=count<=4?2:(count<=6?3:4), rows=Math.ceil(count/cols);
@@ -611,6 +632,44 @@ function drawPopBubble(p,time){
   if(isAnimal(p.shape)) animalFace(ctx,p.shape,s,0);
   ctx.restore();
 }
+function drawDigitGlyph(c,digit,w,h,color,shadowBlur){
+  c.save(); c.font=`900 ${h*0.78}px "Arial Rounded MT Bold","Trebuchet MS",system-ui,sans-serif`;
+  c.textAlign='center'; c.textBaseline='middle'; c.fillStyle=color;
+  if(shadowBlur){ c.shadowColor=color; c.shadowBlur=shadowBlur; }
+  c.fillText(String(digit),w/2,h*0.51); c.restore();
+}
+function drawNumberMode(time){
+  const g=level.drawGame,b=g.box,fade=1-(level.fade||0);
+  ctx.save(); ctx.globalAlpha=fade;
+  ctx.shadowColor='rgba(52,71,61,0.13)'; ctx.shadowBlur=20; ctx.shadowOffsetY=8;
+  ctx.beginPath(); roundRectPath(ctx,b.x,b.y,b.w,b.h,b.w*0.09); ctx.fillStyle='rgba(248,242,231,0.82)'; ctx.fill();
+  ctx.shadowColor='transparent'; ctx.lineWidth=2; ctx.strokeStyle='rgba(67,83,75,0.13)'; ctx.stroke();
+  ctx.save(); ctx.beginPath(); roundRectPath(ctx,b.x,b.y,b.w,b.h,b.w*0.09); ctx.clip(); ctx.translate(b.x,b.y);
+  const retry=g.feedback==='retry', guideAlpha=retry?0.20+Math.sin(time*15)*0.08:0.13+g.pulse*0.10;
+  drawDigitGlyph(ctx,g.digit,b.w,b.h,retry?`rgba(237,160,168,${guideAlpha})`:`rgba(67,83,75,${guideAlpha})`,0);
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.lineWidth=Math.max(17,Math.min(b.w,b.h)*0.065);
+  ctx.strokeStyle=retry?'rgba(221,111,126,0.88)':g.feedback==='success'?'rgba(75,154,121,0.96)':'rgba(67,83,75,0.90)';
+  for(const stroke of g.strokes){
+    if(stroke.length<1) continue; ctx.beginPath(); ctx.moveTo(stroke[0].x,stroke[0].y);
+    for(let i=1;i<stroke.length;i++) ctx.lineTo(stroke[i].x,stroke[i].y);
+    if(stroke.length===1) ctx.lineTo(stroke[0].x+0.1,stroke[0].y+0.1); ctx.stroke();
+  }
+  ctx.restore();
+
+  const hasDrawing=g.strokes.some(s=>s.length>1);
+  for(const [x,kind] of [[g.clearX,'clear'],[g.checkX,'check']]){
+    ctx.save(); ctx.globalAlpha=kind==='check'&&!hasDrawing?0.38:1;
+    ctx.shadowColor='rgba(52,71,61,0.13)'; ctx.shadowBlur=12; ctx.shadowOffsetY=5;
+    ctx.beginPath(); ctx.arc(x,g.buttonY,g.buttonR,0,Math.PI*2); ctx.fillStyle=kind==='check'?'#86BFA8':CREAM; ctx.fill();
+    ctx.shadowColor='transparent'; ctx.strokeStyle=INK; ctx.lineWidth=Math.max(2.4,g.buttonR*0.10); ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath();
+    if(kind==='check'){ ctx.moveTo(x-g.buttonR*0.38,g.buttonY); ctx.lineTo(x-g.buttonR*0.08,g.buttonY+g.buttonR*0.28); ctx.lineTo(x+g.buttonR*0.42,g.buttonY-g.buttonR*0.32); }
+    else { ctx.moveTo(x-g.buttonR*0.36,g.buttonY+g.buttonR*0.24); ctx.lineTo(x+g.buttonR*0.20,g.buttonY-g.buttonR*0.34);
+      ctx.lineTo(x+g.buttonR*0.42,g.buttonY-g.buttonR*0.12); ctx.lineTo(x-g.buttonR*0.14,g.buttonY+g.buttonR*0.46); }
+    ctx.stroke(); ctx.restore();
+  }
+  ctx.restore();
+}
 function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.16); }
 function drawTopBar(time){
   const usableH=H-safe.top-safe.bottom;
@@ -624,8 +683,9 @@ function drawTopBar(time){
     ctx.restore();
   }
   // sağ: bu seviyenin ilerlemesi
-  const n=level.type==='memory'?level.memory.pairs:level.type==='pop'?level.popGame.goal:level.targets.length;
-  const done=level.type==='memory'?level.memory.matched:level.type==='pop'?level.popGame.done:level.targets.filter(t=>t.filled).length;
+  const n=level.type==='memory'?level.memory.pairs:level.type==='pop'?level.popGame.goal:level.type==='numberdraw'?1:level.targets.length;
+  const done=level.type==='memory'?level.memory.matched:level.type==='pop'?level.popGame.done:
+    level.type==='numberdraw'?(phase==='win'?1:0):level.targets.filter(t=>t.filled).length;
   for(let i=0;i<n;i++){
     const x=W-safe.right-W*0.055-(n-1-i)*r*3.1;
     ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
@@ -733,6 +793,85 @@ function updatePop(dt){
     if(p.y<top){p.y=top;p.vy=Math.abs(p.vy);} if(p.y>bottom){p.y=bottom;p.vy=-Math.abs(p.vy);}
   });
 }
+function clearNumberDrawing(playSound){
+  const g=level.drawGame; g.strokes=[]; g.active=null; g.pointerId=null; g.pathLength=0;
+  g.feedback='idle'; g.retryAt=0; g.score=0; if(playSound) sndSoft();
+}
+function numberPoint(e){
+  const b=level.drawGame.box;
+  return {x:clamp(e.clientX-b.x,0,b.w),y:clamp(e.clientY-b.y,0,b.h)};
+}
+function scoreNumberDrawing(){
+  const g=level.drawGame,b=g.box,w=180,h=220;
+  const make=()=>{const c=document.createElement('canvas');c.width=w;c.height=h;return c;};
+  const guide=make(),guideTol=make(),user=make(),userWide=make();
+  function drawUser(c,wide){
+    const q=c.getContext('2d'); q.strokeStyle='#fff'; q.lineCap='round'; q.lineJoin='round';
+    q.lineWidth=Math.min(w,h)*(wide?0.13:0.07);
+    for(const stroke of g.strokes){
+      if(!stroke.length) continue; q.beginPath(); q.moveTo(stroke[0].x/b.w*w,stroke[0].y/b.h*h);
+      for(let i=1;i<stroke.length;i++) q.lineTo(stroke[i].x/b.w*w,stroke[i].y/b.h*h);
+      if(stroke.length===1) q.lineTo(stroke[0].x/b.w*w+0.1,stroke[0].y/b.h*h+0.1); q.stroke();
+    }
+  }
+  drawUser(user,false); drawUser(userWide,true);
+  const ua=user.getContext('2d').getImageData(0,0,w,h).data;
+  const uwa=userWide.getContext('2d').getImageData(0,0,w,h).data;
+  let userCount=0; for(let i=3;i<ua.length;i+=4) if(ua[i]>20) userCount++;
+  function compareDigit(digit){
+    const gc=guide.getContext('2d'),tc=guideTol.getContext('2d');
+    gc.clearRect(0,0,w,h); tc.clearRect(0,0,w,h);
+    drawDigitGlyph(gc,digit,w,h,'#fff',0); drawDigitGlyph(tc,digit,w,h,'#fff',11);
+    const ga=gc.getImageData(0,0,w,h).data,gta=tc.getImageData(0,0,w,h).data;
+    let userValid=0,guideCount=0,guideCovered=0;
+    for(let i=3;i<ga.length;i+=4){
+      if(ua[i]>20&&gta[i]>3) userValid++;
+      if(ga[i]>20){ guideCount++; if(uwa[i]>10) guideCovered++; }
+    }
+    const precision=userCount?userValid/userCount:0,coverage=guideCount?guideCovered/guideCount:0;
+    return {precision,coverage,score:precision*0.52+coverage*0.48};
+  }
+  const target=compareDigit(g.digit); let bestOther=0;
+  for(let digit=0;digit<=9;digit++) if(digit!==g.digit) bestOther=Math.max(bestOther,compareDigit(digit).score);
+  const lengthRatio=g.pathLength/Math.max(1,b.h),looksLikeTarget=target.score>=bestOther-0.025;
+  return {precision:target.precision,coverage:target.coverage,lengthRatio,score:target.score,
+    pass:lengthRatio>=0.42&&target.precision>=0.48&&target.coverage>=0.34&&target.score>=0.44&&looksLikeTarget};
+}
+function checkNumberDrawing(){
+  const g=level.drawGame;
+  if(!g.strokes.some(s=>s.length>1)){ g.pulse=1; sndSoft(); return; }
+  const result=scoreNumberDrawing(); g.score=result.score;
+  if(result.pass){
+    g.feedback='success'; phase='win'; phaseT=0; sndMatch(g.digit); buzz([18,35,18]);
+    burst(g.box.x+g.box.w/2,g.box.y+g.box.h/2,PALETTE[2],REDUCED?5:34); mascotCheer();
+  }else{
+    g.feedback='retry'; g.pulse=1; g.retryAt=time+0.85; sndSoft(); buzz(6); mascotLook(g.box.x+g.box.w/2,g.box.y+g.box.h/2);
+  }
+}
+function handleNumberDown(e){
+  const g=level.drawGame,b=g.box;
+  if(Math.hypot(e.clientX-g.clearX,e.clientY-g.buttonY)<g.buttonR*1.3){ clearNumberDrawing(true); return; }
+  if(Math.hypot(e.clientX-g.checkX,e.clientY-g.buttonY)<g.buttonR*1.3){ checkNumberDrawing(); return; }
+  if(e.clientX<b.x||e.clientX>b.x+b.w||e.clientY<b.y||e.clientY>b.y+b.h||g.pointerId!==null) return;
+  if(g.feedback==='retry') clearNumberDrawing(false);
+  const stroke=[numberPoint(e)]; g.strokes.push(stroke); g.active=stroke; g.pointerId=e.pointerId; g.feedback='drawing';
+  sndPick(); try{cvs.setPointerCapture(e.pointerId);}catch(err){}
+}
+function handleNumberMove(e){
+  const g=level.drawGame; if(g.pointerId!==e.pointerId||!g.active) return false;
+  e.preventDefault(); const point=numberPoint(e),last=g.active[g.active.length-1],dist=Math.hypot(point.x-last.x,point.y-last.y);
+  if(dist>=2){ g.active.push(point); g.pathLength+=dist; mascotLook(e.clientX,e.clientY); }
+  return true;
+}
+function handleNumberUp(e){
+  const g=level.drawGame; if(g.pointerId!==e.pointerId) return false;
+  g.active=null; g.pointerId=null; try{if(cvs.hasPointerCapture(e.pointerId))cvs.releasePointerCapture(e.pointerId);}catch(err){}
+  return true;
+}
+function updateNumberDrawing(dt){
+  const g=level.drawGame; g.pulse=Math.max(0,g.pulse-dt*1.8);
+  if(g.retryAt&&time>=g.retryAt) clearNumberDrawing(false);
+}
 
 function place(p,t){
   p.placed=true; p.drag=false; t.filled=true; p.pop=1; t.pulse=1;
@@ -761,6 +900,7 @@ function onDown(e){
   if(phase!=='play') return;
   if(level.type==='memory'){ handleMemoryTap(x,y); return; }
   if(level.type==='pop'){ handlePopTap(x,y); return; }
+  if(level.type==='numberdraw'){ handleNumberDown(e); return; }
   let grabbed=null;
   for(let i=level.pieces.length-1;i>=0;i--){
     const p=level.pieces[i];
@@ -776,6 +916,7 @@ function onDown(e){
   try{ cvs.setPointerCapture(e.pointerId); }catch(err){}
 }
 function onMove(e){
+  if(started&&level&&level.type==='numberdraw'&&handleNumberMove(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   e.preventDefault();
   d.x=e.clientX; d.y=e.clientY;
@@ -784,6 +925,7 @@ function onMove(e){
   idleT=0;
 }
 function onUp(e){
+  if(started&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   d.x=e.clientX; d.y=e.clientY;
   d.moved=Math.max(d.moved,Math.hypot(d.x-d.x0,d.y-d.y0));
@@ -819,11 +961,13 @@ function onUp(e){
   }
 }
 function onCancel(e){
+  if(started&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   ptrs.delete(e.pointerId);
   if(d.p){ d.p.drag=false; d.p.wig=0.25; }
 }
 function cancelAllPointers(){
+  if(level&&level.type==='numberdraw'){ level.drawGame.active=null; level.drawGame.pointerId=null; }
   ptrs.forEach(d=>{ if(d.p){ d.p.drag=false; d.p.wig=0.25; } });
   ptrs.clear();
 }
@@ -833,10 +977,15 @@ window.addEventListener('pointerup',onUp);
 cvs.addEventListener('pointercancel',onCancel);
 cvs.addEventListener('lostpointercapture',onCancel);
 cvs.addEventListener('keydown',e=>{
-  if(!['Enter',' ','ArrowLeft','ArrowRight'].includes(e.key)) return;
+  if(!['Enter',' ','ArrowLeft','ArrowRight','Backspace','Delete'].includes(e.key)) return;
   e.preventDefault();
   if(!started){ startGame(); return; }
   if(phase!=='play') return;
+  if(level.type==='numberdraw'){
+    if(e.key==='Enter'||e.key===' ') checkNumberDrawing();
+    else if(e.key==='Backspace'||e.key==='Delete') clearNumberDrawing(true);
+    return;
+  }
   if(level.type==='memory'){
     const available=level.pieces.filter(p=>!p.placed&&!p.face);
     if(!available.length) return;
@@ -955,8 +1104,13 @@ function frame(now){
     idleT+=dt;
     if(idleT>6.5 && !hintOn){
       hintOn=true;
-      const p=selected||level.pieces.find(q=>!q.placed);
-      if(p){ p.wig=0.7; const t=slotOf(p); if(t) t.pulse=1; mascotLook(t?t.x:p.x, t?t.y:p.y); mas.bounce=0.7; }
+      if(level.type==='numberdraw'){
+        const g=level.drawGame; g.pulse=1;
+        mascotLook(g.box.x+g.box.w/2,g.box.y+g.box.h/2); mas.bounce=0.7;
+      }else{
+        const p=selected||level.pieces.find(q=>!q.placed);
+        if(p){ p.wig=0.7; const t=slotOf(p); if(t) t.pulse=1; mascotLook(t?t.x:p.x, t?t.y:p.y); mas.bounce=0.7; }
+      }
     }
     if(hintOn && idleT>10.5){ idleT=0; hintOn=false; }
   }
@@ -982,15 +1136,18 @@ function frame(now){
   }
 
   /* --- farklı etkileşimli modlar --- */
-  if(level.type==='memory'||level.type==='pop'){
-    if(level.type==='memory') updateMemory(dt); else updatePop(dt);
+  if(level.type==='memory'||level.type==='pop'||level.type==='numberdraw'){
+    if(level.type==='memory') updateMemory(dt);
+    else if(level.type==='pop') updatePop(dt);
+    else updateNumberDrawing(dt);
     if(!selected&&phase==='play') mascotLook(W*0.5,H*0.56);
     updateMascot(dt);
 
     ctx.drawImage(bgCanvas,0,0,W,H);
     drawTopBar(time); drawMascot(time);
     if(level.type==='memory') level.pieces.forEach(p=>drawMemoryCard(p,time));
-    else { drawPopTarget(time); level.pieces.forEach(p=>drawPopBubble(p,time)); }
+    else if(level.type==='pop'){ drawPopTarget(time); level.pieces.forEach(p=>drawPopBubble(p,time)); }
+    else drawNumberMode(time);
     drawParts();
     if(phase==='win'&&!REDUCED){
       const a=clamp(1-Math.abs(phaseT-1.05)/0.6,0,1)*0.32;
