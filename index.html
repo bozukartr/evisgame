@@ -39,7 +39,7 @@
     touch-action:manipulation;cursor:pointer;transition:opacity .2s ease,transform .2s ease;
   }
   .install-button:active{transform:translateX(-50%) scale(.96)}
-  .install-button[hidden],.install-sheet[hidden],.toast[hidden]{display:none}
+  .install-button[hidden],.install-sheet[hidden],.reset-button[hidden],.reset-sheet[hidden],.toast[hidden]{display:none}
   .install-button svg{width:18px;height:18px;stroke:currentColor}
   .install-sheet{position:fixed;z-index:8;inset:0;display:grid;place-items:end center;padding:18px;
     padding-bottom:calc(var(--safe-bottom) + 18px);background:rgba(50,64,57,.28);backdrop-filter:blur(8px);
@@ -50,6 +50,20 @@
   .install-card h1{margin:14px 0 7px;font-size:21px}.install-card p{margin:0;line-height:1.5;font-size:15px}
   .close-button{position:absolute;right:12px;top:12px;width:40px;height:40px;border:0;border-radius:50%;
     color:#43534B;background:rgba(94,107,100,.10);font-size:24px;line-height:1;touch-action:manipulation;cursor:pointer}
+  .reset-button{position:fixed;z-index:5;left:calc(var(--safe-left) + 14px);bottom:calc(var(--safe-bottom) + 14px);
+    display:grid;place-items:center;width:48px;height:48px;border:1px solid rgba(65,83,73,.14);border-radius:50%;
+    background:rgba(248,242,231,.88);color:#43534B;box-shadow:0 8px 24px rgba(52,71,61,.16);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);touch-action:manipulation;cursor:pointer}
+  .reset-button:active{transform:scale(.94)}.reset-button svg{width:23px;height:23px;stroke:currentColor}
+  .reset-sheet{position:fixed;z-index:8;inset:0;display:grid;place-items:end center;padding:18px;
+    padding-bottom:calc(var(--safe-bottom) + 18px);background:rgba(50,64,57,.28);backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);touch-action:manipulation}
+  .reset-card{position:relative;width:min(100%,420px);box-sizing:border-box;padding:26px 20px 20px;border-radius:28px;
+    background:#F8F2E7;color:#43534B;text-align:center;box-shadow:0 20px 70px rgba(40,56,48,.24)}
+  .reset-card h1{margin:0 0 7px;font-size:21px}.reset-card p{margin:0 0 18px;line-height:1.45;font-size:14px}
+  .reset-actions{display:grid;gap:10px}.action-button{width:100%;border:0;border-radius:16px;padding:14px 16px;
+    background:#86BFA8;color:#283D34;font:750 15px/1.1 system-ui,sans-serif;touch-action:manipulation;cursor:pointer}
+  .action-button.secondary{background:rgba(94,107,100,.10);color:#43534B}.action-button.danger{background:#EDA0A8;color:#4F2F34}
   .toast{position:fixed;z-index:9;top:calc(var(--safe-top) + 14px);left:50%;transform:translateX(-50%);
     max-width:calc(100% - 36px);padding:10px 14px;border-radius:999px;background:rgba(67,83,75,.92);color:white;
     font:650 13px/1.2 system-ui,sans-serif;box-shadow:0 8px 26px rgba(40,56,48,.22);pointer-events:none}
@@ -72,13 +86,28 @@
     <p id="installHelp">Tarayıcı menüsünden “Ana Ekrana Ekle” seçeneğini kullanın.</p>
   </div>
 </section>
+<button id="resetButton" class="reset-button" type="button" hidden aria-label="Bölümü veya ilerlemeyi sıfırla">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 4v6h6M5.2 15a8 8 0 1 0 .3-6.5L4 10" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+</button>
+<section id="resetSheet" class="reset-sheet" hidden aria-modal="true" role="dialog" aria-labelledby="resetTitle">
+  <div class="reset-card">
+    <button id="closeReset" class="close-button" type="button" aria-label="Kapat">×</button>
+    <h1 id="resetTitle">Yeniden başlat</h1>
+    <p>Bölümü tekrar oynayabilir veya kazanılan bütün ilerlemeyi sıfırlayabilirsiniz.</p>
+    <div class="reset-actions">
+      <button id="restartLevel" class="action-button" type="button">Bu bölümü yeniden başlat</button>
+      <button id="resetProgress" class="action-button danger" type="button">Tüm ilerlemeyi sıfırla</button>
+      <button id="cancelReset" class="action-button secondary" type="button">Vazgeç</button>
+    </div>
+  </div>
+</section>
 <div id="statusToast" class="toast" role="status" aria-live="polite" hidden></div>
 <script>
 "use strict";
 
 /* ==========================================================================
    EŞLEŞTİR  ·  2-4 yaş  ·  tek dosya
-   5 oyun tipi tek motorda: renk / şekil / boyut / sayı / hayvan
+   7 oyun tipi: renk / hafıza / şekil / balon / boyut / sayı / hayvan
    Yazı yok · kaybetme yok · süre yok · ceza yok
    ========================================================================== */
 
@@ -361,15 +390,44 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','shape','size','count','animal'];
+const TYPES=['color','memory','shape','pop','size','count','animal'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 
 function pairCount(i){ return i<2?2 : i<9?3 : 4; }
+function resetPhase(){ phase='intro'; phaseT=0; idleT=0; hintOn=false; waved=[]; selected=null; }
+
+function buildMemoryLevel(idx,n){
+  const source=shuffle(SHAPES.concat(ANIMALS).slice()).slice(0,n);
+  const defs=source.map((shape,i)=>({key:i,shape,color:PALETTE[i%PALETTE.length]}));
+  const pieces=shuffle(defs.flatMap(d=>[0,1].map(copy=>({...d,copy,x:0,y:0,hx:0,hy:0,w:0,h:0,
+    face:false,placed:false,drag:false,pop:0,wig:0,out:0,flip:0,born:0,phase:rnd(0,7)}))));
+  level={type:'memory',targets:[],pieces,memory:{pairs:n,matched:0,first:null,second:null,locked:false,
+    match:false,resolveAt:0},cheered:false};
+  cvs.setAttribute('aria-label','Hafıza oyunu. Kartları çevirip eşlerini bulun.');
+  layout();
+  pieces.forEach((p,i)=>{ p.x=p.hx; p.y=p.hy+H*0.08; p.born=-i*0.055; });
+  resetPhase();
+}
+
+function buildPopLevel(idx){
+  const pool=shuffle(SHAPES.concat(ANIMALS).slice()).slice(0,4);
+  const goal=idx<8?5:7;
+  const pieces=shuffle(Array.from({length:6},(_,i)=>({key:i,shape:pool[i%pool.length],color:PALETTE[i%PALETTE.length],
+    x:0,y:0,hx:0,hy:0,vx:rnd(-38,38),vy:rnd(-30,30),r:0,placed:false,drag:false,pop:0,wig:0,
+    out:0,born:0,phase:rnd(0,7)})));
+  level={type:'pop',targets:[],pieces,popGame:{pool,target:pick(pool),done:0,goal,pulse:0},cheered:false};
+  cvs.setAttribute('aria-label','Balon oyunu. Maskotun düşündüğü şekle sahip hareketli balona dokunun.');
+  layout();
+  pieces.forEach((p,i)=>{ p.x=p.hx; p.y=p.hy+H*0.08; p.born=-i*0.055; });
+  resetPhase();
+}
 
 function buildLevel(idx){
   const type=TYPES[idx%TYPES.length];
   const n=pairCount(idx);
+  if(type==='memory'){ buildMemoryLevel(idx,n); return; }
+  if(type==='pop'){ buildPopLevel(idx); return; }
   const cols=shuffle(PALETTE.slice()).slice(0,Math.max(n,3));
   const defs=[];
 
@@ -394,15 +452,39 @@ function buildLevel(idx){
   const pieces =shuffle(defs.slice()).map(d=>({...d,x:0,y:0,hx:0,hy:0,placed:false,drag:false,
     pop:0,lift:0,wig:0,out:0,phase:rnd(0,7),born:0,blink:0,nextBlink:rnd(1,5)}));
 
-  level={type,targets,pieces,cheered:false};
+  level={type,mode:'match',targets,pieces,cheered:false};
+  cvs.setAttribute('aria-label','Eşleştirme oyunu. Parçaları uygun yuvalara taşıyın.');
   layout();
   pieces.forEach((p,i)=>{ p.x=p.hx; p.y=p.hy+H*0.16; p.born=-i*0.09; });
-  phase='intro'; phaseT=0; idleT=0; hintOn=false; waved=[]; selected=null;
+  resetPhase();
 }
 function layout(){
   if(!level) return;
-  const n=level.targets.length;
   const usableH=H-safe.top-safe.bottom;
+  if(level.type==='memory'){
+    const count=level.pieces.length;
+    const cols=count<=4?2:(count<=6?3:4), rows=Math.ceil(count/cols);
+    const gap=Math.max(10,Math.min(W,usableH)*0.022);
+    const cardW=Math.min(104,(W-safe.left-safe.right-gap*(cols+1))/cols,usableH*0.18);
+    const cardH=cardW*1.16, totalH=rows*cardH+(rows-1)*gap;
+    const startY=safe.top+usableH*0.57-totalH/2;
+    unit=cardW*0.54;
+    level.pieces.forEach((p,i)=>{
+      const row=(i/cols)|0, col=i%cols;
+      p.w=cardW; p.h=cardH; p.hx=W/2+(col-(cols-1)/2)*(cardW+gap); p.hy=startY+row*(cardH+gap)+cardH/2;
+    });
+    return;
+  }
+  if(level.type==='pop'){
+    const cols=3, rows=2, gapX=(W-safe.left-safe.right)/cols, gapY=usableH*0.22;
+    unit=Math.min(gapX*0.29,usableH*0.072,58);
+    level.pieces.forEach((p,i)=>{
+      p.r=unit; p.hx=safe.left+gapX*(i%cols+0.5); p.hy=safe.top+usableH*0.49+((i/cols)|0)*gapY;
+      if(!p.x&&!p.y){ p.x=p.hx; p.y=p.hy; }
+    });
+    return;
+  }
+  const n=level.targets.length;
   unit=Math.min((W-safe.left-safe.right)/(n*2.50), usableH*0.086, 76);
   const ty=safe.top+usableH*0.375, py=safe.top+usableH*0.755;
   level.targets.forEach((t,i)=>{ t.x=W*(i+.5)/n; t.y=ty; });
@@ -471,6 +553,64 @@ function drawPiece(p,time){
   });
   ctx.restore();
 }
+function drawMemoryCard(p,time){
+  const born=clamp(p.born,0,1), out=clamp(p.out,0,1); if(born<=0||out>=1) return;
+  const bounce=Math.sin(clamp(p.pop,0,1)*Math.PI)*0.12;
+  const flipScale=Math.max(0.045,Math.abs(Math.cos(p.flip*Math.PI)));
+  const front=p.flip>0.5;
+  ctx.save();
+  ctx.globalAlpha=(1-out*out)*(p.placed?0.48:1);
+  ctx.translate(p.x,p.y-out*unit);
+  ctx.rotate((REDUCED?0:Math.sin(p.wig*25)*p.wig*0.12));
+  ctx.scale(flipScale*born*(1+bounce),born*(1+bounce));
+  ctx.shadowColor='rgba(52,71,61,0.16)'; ctx.shadowBlur=14; ctx.shadowOffsetY=7;
+  ctx.beginPath(); roundRectPath(ctx,-p.w/2,-p.h/2,p.w,p.h,p.w*0.18);
+  ctx.fillStyle=front?CREAM:'#86BFA8'; ctx.fill();
+  ctx.shadowColor='transparent'; ctx.lineWidth=Math.max(2,p.w*0.035); ctx.strokeStyle='rgba(67,83,75,0.20)'; ctx.stroke();
+  if(front){
+    const s=Math.min(p.w,p.h)*0.30;
+    ctx.save(); shapePath(ctx,p.shape,s); ctx.fillStyle=p.color; ctx.fill();
+    if(isAnimal(p.shape)) animalFace(ctx,p.shape,s,0);
+    ctx.restore();
+  }else{
+    ctx.save(); ctx.rotate(REDUCED?0:Math.sin(time*1.5+p.phase)*0.06);
+    starPath(ctx,p.w*0.20); ctx.fillStyle='rgba(248,242,231,0.88)'; ctx.fill(); ctx.restore();
+  }
+  if(selected===p&&!p.placed){
+    ctx.beginPath(); roundRectPath(ctx,-p.w*0.57,-p.h*0.56,p.w*1.14,p.h*1.12,p.w*0.22);
+    ctx.lineWidth=4; ctx.strokeStyle='#EFC978'; ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawPopTarget(time){
+  const g=level.popGame, usableH=H-safe.top-safe.bottom;
+  const y=safe.top+usableH*0.31, r=unit*(1.02+g.pulse*0.10);
+  ctx.save(); ctx.globalAlpha=1-(level.fade||0); ctx.translate(W/2,y+(REDUCED?0:Math.sin(time*1.7)*2));
+  ctx.shadowColor='rgba(52,71,61,0.14)'; ctx.shadowBlur=18; ctx.shadowOffsetY=6;
+  ctx.beginPath(); ctx.arc(0,0,r*1.18,0,Math.PI*2); ctx.fillStyle=CREAM; ctx.fill();
+  ctx.shadowColor='transparent'; ctx.beginPath(); ctx.arc(-r*0.80,r*0.93,r*0.20,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-r*1.02,r*1.18,r*0.10,0,Math.PI*2); ctx.fill();
+  const sample=level.pieces.find(p=>p.shape===g.target)||level.pieces[0];
+  shapePath(ctx,g.target,r*0.55); ctx.fillStyle=sample?sample.color:PALETTE[0]; ctx.fill();
+  if(isAnimal(g.target)) animalFace(ctx,g.target,r*0.55,0);
+  ctx.restore();
+}
+function drawPopBubble(p,time){
+  const born=clamp(p.born,0,1), out=clamp(p.out,0,1); if(born<=0||out>=1) return;
+  const bounce=Math.sin(clamp(p.pop,0,1)*Math.PI)*0.20;
+  const sc=born*(1-out)*(1+bounce);
+  ctx.save(); ctx.globalAlpha=1-out*out; ctx.translate(p.x,p.y); ctx.rotate(REDUCED?0:Math.sin(p.wig*26)*p.wig*0.18); ctx.scale(sc,sc);
+  if(selected===p){ ctx.beginPath(); ctx.arc(0,0,p.r*1.22,0,Math.PI*2); ctx.lineWidth=4; ctx.strokeStyle='#EFC978'; ctx.stroke(); }
+  const rg=ctx.createRadialGradient(-p.r*0.28,-p.r*0.35,p.r*0.05,0,0,p.r);
+  rg.addColorStop(0,'rgba(255,255,255,0.90)'); rg.addColorStop(0.4,p.color+'88'); rg.addColorStop(1,p.color+'44');
+  ctx.beginPath(); ctx.arc(0,0,p.r,0,Math.PI*2); ctx.fillStyle=rg; ctx.fill();
+  ctx.lineWidth=Math.max(2,p.r*0.06); ctx.strokeStyle='rgba(67,83,75,0.28)'; ctx.stroke();
+  ctx.beginPath(); ctx.arc(-p.r*0.28,-p.r*0.30,p.r*0.18,1.05*Math.PI,1.72*Math.PI); ctx.lineWidth=p.r*0.09;
+  ctx.strokeStyle='rgba(255,255,255,0.72)'; ctx.lineCap='round'; ctx.stroke();
+  const s=p.r*0.43; shapePath(ctx,p.shape,s); ctx.fillStyle=p.color; ctx.fill();
+  if(isAnimal(p.shape)) animalFace(ctx,p.shape,s,0);
+  ctx.restore();
+}
 function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.16); }
 function drawTopBar(time){
   const usableH=H-safe.top-safe.bottom;
@@ -484,7 +624,8 @@ function drawTopBar(time){
     ctx.restore();
   }
   // sağ: bu seviyenin ilerlemesi
-  const n=level.targets.length, done=level.targets.filter(t=>t.filled).length;
+  const n=level.type==='memory'?level.memory.pairs:level.type==='pop'?level.popGame.goal:level.targets.length;
+  const done=level.type==='memory'?level.memory.matched:level.type==='pop'?level.popGame.done:level.targets.filter(t=>t.filled).length;
   for(let i=0;i<n;i++){
     const x=W-safe.right-W*0.055-(n-1-i)*r*3.1;
     ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
@@ -535,6 +676,63 @@ let selected=null;
 
 const hitPiece=(p,x,y)=>{ const s=unit*p.sc; return (x-p.x)**2+(y-p.y)**2 < (s*1.5)**2; };
 const hitSlot =(t,x,y)=>{ const s=unit*t.sc; return (x-t.x)**2+(y-t.y)**2 < (s*1.7)**2; };
+const hitMemoryCard=(p,x,y)=>Math.abs(x-p.x)<p.w*0.58&&Math.abs(y-p.y)<p.h*0.58;
+const hitBubble=(p,x,y)=>Math.hypot(x-p.x,y-p.y)<p.r*1.22;
+
+function revealMemoryCard(p){
+  const m=level.memory;
+  if(phase!=='play'||m.locked||p.face||p.placed) return;
+  p.face=true; p.pop=1; selected=p; sndSel(); mascotLook(p.x,p.y);
+  if(!m.first){ m.first=p; return; }
+  m.second=p; m.match=m.first.key===p.key; m.locked=true; m.resolveAt=time+(m.match?0.38:0.78);
+}
+function handleMemoryTap(x,y){
+  for(let i=level.pieces.length-1;i>=0;i--){ const p=level.pieces[i]; if(hitMemoryCard(p,x,y)){ revealMemoryCard(p); return; } }
+}
+function updateMemory(dt){
+  const m=level.memory;
+  level.pieces.forEach(p=>{
+    p.x=ease(p.x,p.hx,15,dt); p.y=ease(p.y,p.hy,15,dt);
+    p.flip=ease(p.flip,(p.face||p.placed)?1:0,18,dt);
+    p.pop=Math.max(0,p.pop-dt*2.4); p.wig=Math.max(0,p.wig-dt*1.1);
+  });
+  if(!m.locked||time<m.resolveAt) return;
+  const a=m.first,b=m.second;
+  if(m.match){
+    a.placed=true; b.placed=true; m.matched++; selected=null;
+    sndMatch(m.matched-1); buzz(12); burst(a.x,a.y,a.color,REDUCED?2:14); burst(b.x,b.y,b.color,REDUCED?2:14);
+    mascotCheer(); mascotLook((a.x+b.x)/2,(a.y+b.y)/2);
+    if(m.matched>=m.pairs){ phase='win'; phaseT=0; }
+  }else{
+    a.face=false; b.face=false; a.wig=0.35; b.wig=0.35; selected=null; sndSoft();
+  }
+  m.first=null; m.second=null; m.locked=false;
+}
+function hitPopPiece(p){
+  const g=level.popGame;
+  if(phase!=='play') return;
+  mascotLook(p.x,p.y);
+  if(p.shape!==g.target){ p.wig=0.5; g.pulse=1; sndSoft(); return; }
+  g.done++; p.pop=1; sndMatch(g.done-1); buzz(10); burst(p.x,p.y,p.color,REDUCED?3:18); mascotCheer();
+  if(g.done>=g.goal){ phase='win'; phaseT=0; selected=null; return; }
+  p.shape=pick(g.pool); p.color=pick(PALETTE); p.x=p.hx+rnd(-unit,unit); p.y=p.hy+rnd(-unit*0.5,unit*0.5);
+  g.target=pick(level.pieces).shape; g.pulse=1;
+}
+function handlePopTap(x,y){
+  for(let i=level.pieces.length-1;i>=0;i--){ const p=level.pieces[i]; if(hitBubble(p,x,y)){ selected=p; hitPopPiece(p); return; } }
+}
+function updatePop(dt){
+  const usableH=H-safe.top-safe.bottom, top=safe.top+usableH*0.40, bottom=safe.top+usableH*0.84;
+  level.popGame.pulse=Math.max(0,level.popGame.pulse-dt*1.9);
+  level.pieces.forEach(p=>{
+    p.pop=Math.max(0,p.pop-dt*2.0); p.wig=Math.max(0,p.wig-dt*1.1);
+    if(phase!=='play'||REDUCED) return;
+    p.x+=p.vx*dt; p.y+=p.vy*dt;
+    const left=safe.left+p.r*1.08,right=W-safe.right-p.r*1.08;
+    if(p.x<left){p.x=left;p.vx=Math.abs(p.vx);} if(p.x>right){p.x=right;p.vx=-Math.abs(p.vx);}
+    if(p.y<top){p.y=top;p.vy=Math.abs(p.vy);} if(p.y>bottom){p.y=bottom;p.vy=-Math.abs(p.vy);}
+  });
+}
 
 function place(p,t){
   p.placed=true; p.drag=false; t.filled=true; p.pop=1; t.pulse=1;
@@ -549,7 +747,7 @@ function autoPlace(p){ const t=slotOf(p); if(t && !t.filled) place(p,t); }
 function startGame(){
   if(started) return;
   audioInit(); if(AC&&AC.state==='suspended') AC.resume();
-  started=true; installButton.hidden=true; goFullscreen(); keepAwake(); buildLevel(levelIndex);
+  started=true; installButton.hidden=true; resetButton.hidden=false; goFullscreen(); keepAwake(); buildLevel(levelIndex);
   cvs.setAttribute('aria-label','EvisGame eşleştirme oyunu devam ediyor.');
   try{ cvs.focus({preventScroll:true}); }catch(e){ cvs.focus(); }
   note(PENTA[0],0,0.4); note(PENTA[3],0.09,0.35);
@@ -561,6 +759,8 @@ function onDown(e){
   const x=e.clientX, y=e.clientY; idleT=0; hintOn=false;
   if(!started){ startGame(); return; }
   if(phase!=='play') return;
+  if(level.type==='memory'){ handleMemoryTap(x,y); return; }
+  if(level.type==='pop'){ handlePopTap(x,y); return; }
   let grabbed=null;
   for(let i=level.pieces.length-1;i>=0;i--){
     const p=level.pieces[i];
@@ -637,6 +837,19 @@ cvs.addEventListener('keydown',e=>{
   e.preventDefault();
   if(!started){ startGame(); return; }
   if(phase!=='play') return;
+  if(level.type==='memory'){
+    const available=level.pieces.filter(p=>!p.placed&&!p.face);
+    if(!available.length) return;
+    if(e.key==='Enter'||e.key===' '){ revealMemoryCard(available.includes(selected)?selected:available[0]); return; }
+    const current=Math.max(0,available.indexOf(selected)), direction=e.key==='ArrowRight'?1:-1;
+    selected=available[(current+direction+available.length)%available.length]; sndSel(); mascotLook(selected.x,selected.y); return;
+  }
+  if(level.type==='pop'){
+    const available=level.pieces;
+    if(e.key==='Enter'||e.key===' '){ hitPopPiece(selected||available[0]); return; }
+    const current=Math.max(0,available.indexOf(selected)), direction=e.key==='ArrowRight'?1:-1;
+    selected=available[(current+direction+available.length)%available.length]; sndSel(); mascotLook(selected.x,selected.y); return;
+  }
   const available=level.pieces.filter(p=>!p.placed&&!p.drag);
   if(!available.length) return;
   if(e.key==='Enter'||e.key===' '){
@@ -667,6 +880,12 @@ const installSheet=document.getElementById('installSheet');
 const installHelp=document.getElementById('installHelp');
 const closeInstall=document.getElementById('closeInstall');
 const statusToast=document.getElementById('statusToast');
+const resetButton=document.getElementById('resetButton');
+const resetSheet=document.getElementById('resetSheet');
+const closeReset=document.getElementById('closeReset');
+const restartLevelButton=document.getElementById('restartLevel');
+const resetProgressButton=document.getElementById('resetProgress');
+const cancelReset=document.getElementById('cancelReset');
 const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
 const isMobile=/Android|iPad|iPhone|iPod/i.test(navigator.userAgent) || navigator.maxTouchPoints>1;
 const isStandalone=matchMedia('(display-mode: standalone)').matches || navigator.standalone===true;
@@ -693,6 +912,19 @@ installButton.addEventListener('click',async e=>{
 });
 closeInstall.addEventListener('click',()=>{ installSheet.hidden=true; });
 installSheet.addEventListener('click',e=>{ if(e.target===installSheet) installSheet.hidden=true; });
+resetButton.addEventListener('pointerdown',e=>e.stopPropagation());
+resetButton.addEventListener('click',e=>{ e.stopPropagation(); resetSheet.hidden=false; });
+closeReset.addEventListener('click',()=>{ resetSheet.hidden=true; });
+cancelReset.addEventListener('click',()=>{ resetSheet.hidden=true; });
+resetSheet.addEventListener('click',e=>{ if(e.target===resetSheet) resetSheet.hidden=true; });
+restartLevelButton.addEventListener('click',()=>{
+  cancelAllPointers(); parts.length=0; buildLevel(levelIndex); resetSheet.hidden=true; showToast('Bölüm yeniden başladı');
+});
+resetProgressButton.addEventListener('click',()=>{
+  cancelAllPointers(); parts.length=0; levelIndex=0; stars=0;
+  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  buildLevel(0); resetSheet.hidden=true; showToast('İlerleme sıfırlandı');
+});
 window.addEventListener('online',()=>showToast('Bağlantı yeniden kuruldu'));
 window.addEventListener('offline',()=>showToast('Çevrimdışı oynuyorsunuz'));
 refreshInstallButton();
@@ -747,6 +979,24 @@ function frame(now){
       level.pieces.forEach((p,i)=>{ p.out=clamp(p.out+dt*(1.3+i*0.12),0,1); });
     }
     if(phaseT>3.1){ levelIndex++; saveProgress(); buildLevel(levelIndex); }
+  }
+
+  /* --- farklı etkileşimli modlar --- */
+  if(level.type==='memory'||level.type==='pop'){
+    if(level.type==='memory') updateMemory(dt); else updatePop(dt);
+    if(!selected&&phase==='play') mascotLook(W*0.5,H*0.56);
+    updateMascot(dt);
+
+    ctx.drawImage(bgCanvas,0,0,W,H);
+    drawTopBar(time); drawMascot(time);
+    if(level.type==='memory') level.pieces.forEach(p=>drawMemoryCard(p,time));
+    else { drawPopTarget(time); level.pieces.forEach(p=>drawPopBubble(p,time)); }
+    drawParts();
+    if(phase==='win'&&!REDUCED){
+      const a=clamp(1-Math.abs(phaseT-1.05)/0.6,0,1)*0.32;
+      if(a>0){ ctx.globalAlpha=a; ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1; }
+    }
+    requestAnimationFrame(frame); return;
   }
 
   /* --- sürükleme + mıknatıs yardımı --- */

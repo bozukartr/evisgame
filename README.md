@@ -1,6 +1,6 @@
 # EvisGame
 
-EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir eşleştirme oyunudur. Renk, şekil, boyut, sayı ve hayvan eşleştirmelerini tek bir dokunmatik oyun motorunda sunar.
+EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir mini oyun koleksiyonudur. Renk, şekil, boyut, sayı ve hayvan eşleştirmelerine ek olarak kart hafıza ve hareketli balon yakalama modları sunar.
 
 ## Özellikler
 
@@ -9,6 +9,8 @@ EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir eşleş
 - Normal, iOS ve Android maskable ikon setleri
 - Safe-area, yüksek DPI, yatay/dikey ekran ve çoklu dokunma desteği
 - Sürükle-bırak ve dokun-yerleştir kontrolleri
+- Kart çevirme hafıza modu ve hareketli balonlara dokunma modu
+- Bölümü yeniden başlatma ve onaylı ilerleme sıfırlama kontrolleri
 - Ses, titreşim, azaltılmış hareket ve ekran kilidi uyumu
 - Yerel ilerleme kaydı; hiçbir kişisel veri veya ağ tabanlı analiz yok
 
