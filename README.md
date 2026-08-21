@@ -9,11 +9,17 @@ EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir mini oy
 - Normal, iOS ve Android maskable ikon setleri
 - Safe-area, yüksek DPI, yatay/dikey ekran ve çoklu dokunma desteği
 - Sürükle-bırak ve dokun-yerleştir kontrolleri
+- Yazısız, animasyonlu kategori menüsü ve her oyun için canlı döngü önizlemesi
 - Kart çevirme hafıza modu ve hareketli balonlara dokunma modu
-- 0–9 rakamlarını çoklu çizgiyle çizme; çizim bitince otomatik yakınlık kontrolü ve çizgiden temiz rakama dönüşüm animasyonu
+- 0–9 rakamlarını yalnızca rakam yüzeyinde çoklu çizgiyle çizme; hareketli iz rehberi, otomatik yakınlık kontrolü ve temiz rakama dönüşüm animasyonu
 - Bölümü yeniden başlatma ve onaylı ilerleme sıfırlama kontrolleri
+- Her 3–5 oyun arasında 5–10 saniyelik demo reklam; ebeveyn işlemi arkasında kalıcı demo reklamsız seçenek
 - Ses, titreşim, azaltılmış hareket ve ekran kilidi uyumu
 - Yerel ilerleme kaydı; hiçbir kişisel veri veya ağ tabanlı analiz yok
+
+## Reklam demosu
+
+Mevcut reklam ekranı yalnızca yerel bir prototiptir; harici reklam isteği veya gerçek ödeme yapmaz. Üretim entegrasyonunda bu katman, çocuklara yönelik yaş işlemesi ve gizlilik ayarları yapılandırılmış bir Google reklam sağlayıcısıyla değiştirilmelidir.
 
 ## Yerel çalıştırma
 
