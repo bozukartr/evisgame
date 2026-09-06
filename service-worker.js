@@ -1,9 +1,10 @@
 "use strict";
 
-const CACHE_VERSION = "evisgame-v1.4.0";
+const CACHE_VERSION = "evisgame-v2.0.0";
 const APP_SHELL = [
   "./",
   "./index.html",
+  "./playground.js",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
   "./icons/apple-touch-icon.png",

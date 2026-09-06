@@ -34,3 +34,26 @@ Ardından `http://localhost:8080` adresini açın.
 ## GitHub Pages
 
 Manifest ve service worker yolları göreli tanımlanmıştır; bu nedenle proje sitesi olarak `https://bozukartr.github.io/evisgame/` altında çalışır.
+
+## Mobil oyun bahçesi · v2
+
+- 11 mini oyun: mevcut sekiz oyuna meyve toplama, müzik sırası ve örüntü tamamlama eklendi.
+- Bahçe, Deniz ve Uzay dünyaları; dünya tercihi cihazda saklanır.
+- Büyük resimli kartlar, dokunmatik alanlarla aynı konumdaki erişilebilir menü düğmeleri, bölüm HUD'ı ve tamamlanma rozetleri.
+- Canvas ile çözünürlükten bağımsız meyveler, sepetler, müzik tuşları ve detaylandırılmış hayvanlar. Harici resim isteği yok.
+- Meyve bahçesinde sepette gösterilen türü toplayın. Müzik atölyesinde ışıklı sırayı izleyip tekrarlayın; dairesel ok gösterimi tekrar oynatır. Örüntü oyununda eksik şekli seçin.
+- Klavyede yön tuşları seçim, Enter/Space etkileşim sağlar. Menü düğmeleri Tab ile seçilebilir.
+- Mevcut kayıt anahtarı ve ebeveyn/reklam demo akışı korunur. Yeni dosya service worker önbelleğine dahil edilmiştir.
+
+### Geliştirme kontrolü
+
+`index.html` temel oyun döngüsünü, `playground.js` görsel dünyaları, menüyü ve yeni mini oyunları içerir. Framework veya derleme adımı gerekmez.
+
+Canvas ve oyun mantığı kontrolleri için Node.js ve `@napi-rs/canvas` gerekir:
+
+```bash
+npm install --no-save @napi-rs/canvas
+node tests/playground.cjs
+```
+
+İsteğe bağlı `EVIS_RENDER_DIR=/tmp/evis-renders` değişkeniyle Canvas ekran çıktıları alınır. Kontroller dört ekran ölçüsünde 11 modun çizimini, yeni oyunların tamamlanmasını, yanlış seçimleri, müzik gösterimi sırasında giriş kilidini ve ilerleme kaydını doğrular. Bu kontroller gerçek telefon tarayıcısının dokunma, ses ve PWA testinin yerine geçmez.
