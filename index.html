@@ -176,7 +176,7 @@ function loadProgress(){
 const savedProgress=loadProgress();
 let modeRounds=savedProgress.modeRounds&&typeof savedProgress.modeRounds==='object'?savedProgress.modeRounds:{};
 function saveProgress(){
-  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify({levelIndex,stars,modeRounds,updatedAt:Date.now()})); }catch(e){}
+  try{ localStorage.setItem(STORAGE_KEY,JSON.stringify({levelIndex,stars,modeRounds,sensoryTotals,updatedAt:Date.now()})); }catch(e){}
 }
 
 /* ---------------- yardımcı ---------------- */
@@ -441,7 +441,7 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern'];
+const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 let activeType=null;
@@ -489,7 +489,7 @@ function buildLevel(idx){
   const type=activeType||TYPES[idx%TYPES.length];
   const round=activeType?Math.max(0,modeRounds[type]|0):idx;
   const n=pairCount(round);
-  if(['orchard','rhythm','pattern'].includes(type)){ buildAdventure(type,round); return; }
+  if(FREE_PLAY.includes(type)){ buildAdventure(type,round); return; }
   if(type==='memory'){ buildMemoryLevel(round,n); return; }
   if(type==='pop'){ buildPopLevel(round); return; }
   if(type==='numberdraw'){ buildNumberDrawingLevel(round); return; }
@@ -759,13 +759,16 @@ function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.1
 /* ---------------- açılış ---------------- */
 let started=false,appView='start';
 /* ---------------- yazısız animasyonlu oyun menüsü ---------------- */
-const MAIN_MENU=['match','memory','pop','numberdraw','orchard','rhythm','pattern'];
+const MAIN_MENU=['pop','rhythm','pattern','orchard','aquarium','fireworks','learn'];
+const LEARN_MENU=['match','memory','numberdraw'];
+const menuKinds=()=>appView==='matchMenu'?MATCH_MENU:appView==='learnMenu'?LEARN_MENU:MAIN_MENU;
 const MATCH_MENU=['color','shape','size','count','animal'];
 function drawMiniShape(shape,x,y,s,color,alpha=1){
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);shapePath(ctx,shape,s);ctx.fillStyle=color;ctx.fill();
   if(isAnimal(shape)) animalFace(ctx,shape,s,0);ctx.restore();
 }
 function openMenu(page='menu'){
+  if(level&&level.adventure)saveProgress();
   cancelAllPointers();parts.length=0;level=null;activeType=null;appView=page;phase='intro';phaseT=0;
   resetButton.hidden=true;homeButton.hidden=page==='menu'; syncMenuButtons();
   cvs.setAttribute('aria-label',page==='matchMenu'?'Eşleştirme oyunları menüsü. Animasyonlu oyun kartlarından birini seçin.':'EvisGame ana menüsü. Animasyonlu oyun kategorilerinden birini seçin.');
@@ -775,8 +778,9 @@ function beginMode(type){
   cvs.focus({preventScroll:true}); sndSel();
 }
 function handleMenuTap(x,y){
-  const cards=menuCards(appView==='matchMenu'?MATCH_MENU:MAIN_MENU),hit=cards.find(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h);
+  const cards=menuCards(menuKinds()),hit=cards.find(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h);
   if(!hit) return;
+  if(hit.kind==='learn'){openMenu('learnMenu');sndSel();return;}
   if(hit.kind==='match'){appView='matchMenu';syncMenuButtons();homeButton.hidden=false;cvs.setAttribute('aria-label','Eşleştirme oyunları menüsü.');sndSel();return;}
   beginMode(hit.kind);
 }
@@ -963,10 +967,10 @@ function onDown(e){
   audioInit(); if(AC&&AC.state==='suspended') AC.resume();
   const x=e.clientX, y=e.clientY; idleT=0; hintOn=false;
   if(!started){ startGame(); return; }
-  if(appView==='menu'||appView==='matchMenu'){ handleMenuTap(x,y); return; }
+  if(['menu','matchMenu','learnMenu'].includes(appView)){ handleMenuTap(x,y); return; }
   if(appView!=='game'||!level) return;
   if(phase!=='play') return;
-  if(level.adventure){ tapAdventure(x,y); return; }
+  if(level.adventure){ startTouch(e); return; }
   if(level.type==='memory'){ handleMemoryTap(x,y); return; }
   if(level.type==='pop'){ handlePopTap(x,y); return; }
   if(level.type==='numberdraw'){ handleNumberDown(e); return; }
@@ -985,6 +989,7 @@ function onDown(e){
   try{ cvs.setPointerCapture(e.pointerId); }catch(err){}
 }
 function onMove(e){
+  if(moveTouch(e))return;
   if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberMove(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   e.preventDefault();
@@ -994,6 +999,7 @@ function onMove(e){
   idleT=0;
 }
 function onUp(e){
+  endTouch(e);
   if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   d.x=e.clientX; d.y=e.clientY;
@@ -1030,12 +1036,15 @@ function onUp(e){
   }
 }
 function onCancel(e){
+  endTouch(e);
   if(started&&appView==='game'&&level&&level.type==='numberdraw'&&handleNumberUp(e)) return;
   const d=ptrs.get(e.pointerId); if(!d) return;
   ptrs.delete(e.pointerId);
   if(d.p){ d.p.drag=false; d.p.wig=0.25; }
 }
 function cancelAllPointers(){
+  for(const id of touchPointers.keys()){try{cvs.releasePointerCapture(id);}catch(e){}}
+  touchPointers.clear();
   if(level&&level.type==='numberdraw'){ level.drawGame.active=null; level.drawGame.pointerId=null; }
   ptrs.forEach(d=>{ if(d.p){ d.p.drag=false; d.p.wig=0.25; } });
   ptrs.clear();
@@ -1197,7 +1206,7 @@ restartLevelButton.addEventListener('click',()=>{
   cancelAllPointers(); parts.length=0; buildLevel(levelIndex); resetSheet.hidden=true; showToast('Bölüm yeniden başladı');
 });
 resetProgressButton.addEventListener('click',()=>{
-  cancelAllPointers(); parts.length=0; levelIndex=0; stars=0; modeRounds={};
+  cancelAllPointers(); parts.length=0; levelIndex=0; stars=0; modeRounds={}; Object.keys(sensoryTotals).forEach(k=>delete sensoryTotals[k]);
   try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
   buildLevel(0); resetSheet.hidden=true; showToast('İlerleme sıfırlandı');
 });
@@ -1216,11 +1225,13 @@ if('serviceWorker' in navigator && /^https?:$/.test(location.protocol)){
 /* ---------------- döngü ---------------- */
 let last=performance.now(), time=0;
 function frame(now){
-  let dt=(now-last)/1000; last=now; dt=Math.min(dt,0.05); time+=dt;
+  let dt=(now-last)/1000; last=now; dt=Math.min(dt,0.05);
+  if(document.visibilityState==='hidden'||!resetSheet.hidden||!demoAd.hidden||!parentSheet.hidden){cancelAllPointers();requestAnimationFrame(frame);return;}
+  time+=dt;
   updateParts(dt);
 
   if(!started){ drawStart(time); drawParts(); requestAnimationFrame(frame); return; }
-  if(appView==='menu'||appView==='matchMenu'){ drawGameMenu(time); requestAnimationFrame(frame); return; }
+  if(['menu','matchMenu','learnMenu'].includes(appView)){ drawGameMenu(time); requestAnimationFrame(frame); return; }
   if(appView!=='game'||!level){ requestAnimationFrame(frame); return; }
   phaseT+=dt;
 
@@ -1353,7 +1364,9 @@ function frame(now){
 
 
 </script>
+<script src="touch-art.js"></script>
 <script src="playground.js"></script>
+<script src="sensory.js"></script>
 <script>resize(); requestAnimationFrame(frame);</script>
 </body>
 </html>
