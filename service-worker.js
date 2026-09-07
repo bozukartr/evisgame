@@ -1,10 +1,24 @@
 "use strict";
 
-const CACHE_VERSION = "evisgame-v2.0.0";
+const CACHE_VERSION = "evisgame-v2.1.0";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./playground.js",
+  "./touch-art.js",
+  "./sensory.js",
+  "./assets/play/apple.svg",
+  "./assets/play/bell.svg",
+  "./assets/play/bubble.svg",
+  "./assets/play/butterfly.svg",
+  "./assets/play/drum.svg",
+  "./assets/play/fish.svg",
+  "./assets/play/flower.svg",
+  "./assets/play/orange.svg",
+  "./assets/play/pear.svg",
+  "./assets/play/rocket.svg",
+  "./assets/play/turtle.svg",
+  "./assets/play/xylophone.svg",
   "./manifest.webmanifest",
   "./icons/favicon-32.png",
   "./icons/apple-touch-icon.png",

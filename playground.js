@@ -2,8 +2,8 @@
 const WORLD_NAMES=['Bahçe','Deniz','Uzay'];
 let world=0;
 try { world=clamp(Number(localStorage.getItem('evisgame-world'))||0,0,2)|0; } catch(e) {}
-const GAME_LABELS={match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Müzik atölyesi',pattern:'Sırada ne var?',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
-const CARD_COLORS={match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#B5DDF8',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
+const GAME_LABELS={match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Neşeli müzik',pattern:'Sihirli bahçe',aquarium:'Akvaryum',fireworks:'Işık şöleni',learn:'Birlikte öğrenelim',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
+const CARD_COLORS={match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#C3E6B0',aquarium:'#93DAD9',fireworks:'#CCBEED',learn:'#F4DDB2',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
 function pill(x,y,w,h,color,r=20){ctx.beginPath();roundRectPath(ctx,x,y,w,h,Math.min(r,h/2));ctx.fillStyle=color;ctx.fill();}
 function label(text,x,y,size=16,color=INK){ctx.fillStyle=color;ctx.font=`800 ${size}px ui-rounded,system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);}
 function orb(x,y,r,color){ctx.beginPath();ctx.arc(x,y,Math.max(.1,r),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
@@ -28,10 +28,6 @@ function basket(x,y,r){
   ctx.save();ctx.translate(x,y);ctx.strokeStyle='#B97848';ctx.lineWidth=r*.13;ctx.beginPath();ctx.arc(0,-r*.2,r*.58,Math.PI,Math.PI*2);ctx.stroke();
   pill(-r,-r*.3,r*2,r*.95,'#D99B62',r*.23);ctx.save();ctx.beginPath();roundRectPath(ctx,-r,-r*.3,r*2,r*.95,r*.23);ctx.clip();ctx.strokeStyle='#BB7C482E';ctx.lineWidth=3;
   for(let i=-3;i<4;i++){ctx.beginPath();ctx.moveTo(i*r*.3,-r*.3);ctx.lineTo(i*r*.3,r);ctx.stroke();}ctx.restore();pill(-r*1.05,-r*.36,r*2.1,r*.18,'#F3C586',r*.08);ctx.restore();
-}
-function musicPad(x,y,r,i,lit){
-  ctx.save();ctx.shadowColor='#47496933';ctx.shadowOffsetY=6;ctx.shadowBlur=10;pill(x-r,y-r,r*2,r*2,lit?'#FFFFFF':PALETTE[[0,3,4][i]],r*.38);ctx.shadowColor='transparent';
-  ctx.strokeStyle=lit?PALETTE[[0,3,4][i]]:'#FFFFFF';ctx.lineWidth=r*.11;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x+r*.15,y+r*.17);ctx.lineTo(x+r*.15,y-r*.34);ctx.lineTo(x+r*.43,y-r*.23);ctx.stroke();orb(x,y+r*.22,r*.2,lit?PALETTE[[0,3,4][i]]:'#FFFFFF');ctx.restore();
 }
 // Cached scenes keep expensive drawing outside the animation loop.
 function buildBackground(){
@@ -67,11 +63,8 @@ function drawMenuCard(card,time){
   ctx.save();ctx.beginPath();roundRectPath(ctx,x,y,w,h,22);ctx.clip();pill(x+4,y+4,w-8,h*.72,CARD_COLORS[kind],18);orb(x+w*.95,y+h*.08,s*.45,'#FFFFFF28');orb(x+w*.06,y+h*.65,s*.23,'#FFFFFF24');
   const bob=REDUCED?0:Math.sin(time*1.8+kind.length)*2;
   ctx.translate(0,bob);
-  if(kind==='orchard'){basket(cx,cy+s*.1,s*.26);fruit(0,cx-s*.19,cy-s*.12,s*.20);fruit(1,cx+s*.18,cy-s*.13,s*.17);}
-  else if(kind==='rhythm'){for(let i=0;i<3;i++)musicPad(cx+(i-1)*s*.28,cy+(i===1?-s*.08:s*.04),s*.13,i,Math.floor(time*1.2)%3===i);}
-  else if(kind==='pattern'){for(let i=0;i<3;i++)toy(i%2?'circle':'star',cx+(i-1)*s*.3,cy,s*.13,PALETTE[i%2?3:0]);}
+  if(['pop','rhythm','pattern','orchard','aquarium','fireworks','learn'].includes(kind)){drawSensoryPreview(kind,cx,cy,s,time);}
   else if(kind==='memory'){for(const i of [-1,1]){ctx.save();ctx.translate(cx+i*s*.2,cy);ctx.rotate(i*.12);pill(-s*.17,-s*.23,s*.34,s*.46,i<0?'#9A7ADB':'#FFFFFF',s*.065);toy(i<0?'star':'heart',0,0,s*.095,i<0?'#FCE19B':'#F48BB0');ctx.restore();}}
-  else if(kind==='pop'){for(let i=0;i<3;i++){const bx=cx+(i-1)*s*.28,by=cy+(i%2?s*-.1:s*.06);ctx.strokeStyle='#FFFFFFAA';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(bx,by);ctx.quadraticCurveTo(bx-7,by+s*.28,bx+3,by+s*.32);ctx.stroke();toy('circle',bx,by,s*.17,PALETTE[i+3]);orb(bx-s*.05,by-s*.065,s*.035,'#FFFFFFBB');}}
   else if(kind==='numberdraw'){label('3',cx,cy,s*.6,'#329A79');toy('star',cx+s*.3,cy-s*.16,s*.085,'#FFEDB4');}
   else if(kind==='animal'){toy('cat',cx-s*.18,cy,s*.18,'#FFB884');toy('frog',cx+s*.2,cy+s*.04,s*.17,'#83D0A4');}
   else if(kind==='count'){for(let i=0;i<3;i++)fruit(i,cx+(i-1)*s*.27,cy,s*.14);}
@@ -82,15 +75,16 @@ function drawMenuCard(card,time){
 };
 function drawGameMenu(time){
   ctx.drawImage(bgCanvas,0,0,W,H);const uh=H-safe.top-safe.bottom,wide=W>H*1.25;
-  label(appView==='matchMenu'?'Eşleştirme adası':'Oyun bahçem',W/2,safe.top+uh*.075,wide?24:28);
-  label(appView==='matchMenu'?'Birlikte keşfedelim':'Küçük dokunuşlar, büyük keşifler',W/2,safe.top+uh*.122,12,'#637F95');
+  label(appView==='matchMenu'?'Eşleştirme adası':appView==='learnMenu'?'Birlikte öğrenelim':'Dokun ve keşfet',W/2,safe.top+uh*.075,wide?24:28);
+  label(appView==='matchMenu'?'Birlikte keşfedelim':'Her dokunuşta yeni bir sürpriz',W/2,safe.top+uh*.122,12,'#637F95');
   if(!wide){pill(W/2-66,safe.top+uh*.158,132,25,'#FFFFFFBA',14);label(`${levelIndex} keşif  ·  ${stars} yıldız`,W/2,safe.top+uh*.158+13,11,'#60817F');}
-  menuCards(appView==='matchMenu'?MATCH_MENU:MAIN_MENU).forEach(card=>drawMenuCard(card,time));drawParts();
+  menuCards(menuKinds()).forEach(card=>drawMenuCard(card,time));drawParts();
 };
 function drawTopBar(){
   const g=level.adventure;
-  const n=g?g.goal:level.type==='memory'?level.memory.pairs:level.type==='pop'?level.popGame.goal:level.type==='numberdraw'?1:level.targets.length;
-  const done=g?g.done:level.type==='memory'?level.memory.matched:level.type==='pop'?level.popGame.done:level.type==='numberdraw'?(phase==='win'?1:0):level.targets.filter(t=>t.filled).length;
+  if(g){drawSensoryHud();return;}
+  const n=level.type==='memory'?level.memory.pairs:level.type==='pop'?level.popGame.goal:level.type==='numberdraw'?1:level.targets.length;
+  const done=level.type==='memory'?level.memory.matched:level.type==='pop'?level.popGame.done:level.type==='numberdraw'?(phase==='win'?1:0):level.targets.filter(t=>t.filled).length;
   const w=Math.min(W-safe.left-safe.right-32,440),x=(W-w)/2,y=safe.top+14;
   pill(x,y,w,44,'#FFFFFFCF',19);label(GAME_LABELS[level.type],x+w*.29,y+18,13);
   pill(x+14,y+33,w-28,4,'#DCE8ED',2);if(done)pill(x+14,y+33,(w-28)*done/n,4,'#69C99F',2);
@@ -109,61 +103,10 @@ const style=document.createElement('style');style.textContent=`
 `;document.head.append(style);
 WORLD_NAMES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=()=>{world=i;try{localStorage.setItem('evisgame-world',world);}catch(e){}buildBackground();syncMenuButtons();sndSel();};worldBar.append(b);});
 function syncMenuButtons(){
-  const visible=appView==='menu'||appView==='matchMenu';menuLayer.replaceChildren();worldBar.hidden=!visible;
+  const visible=['menu','matchMenu','learnMenu'].includes(appView);menuLayer.replaceChildren();worldBar.hidden=!visible;
   [...worldBar.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(world===i)));
   if(!visible)return;
-  menuCards(appView==='matchMenu'?MATCH_MENU:MAIN_MENU).forEach(card=>{const b=document.createElement('button');b.type='button';b.className='menu-hit';b.setAttribute('aria-label',GAME_LABELS[card.kind]);Object.assign(b.style,{left:card.x+'px',top:card.y+'px',width:card.w+'px',height:card.h+'px'});b.onclick=()=>{audioInit();handleMenuTap(card.x+card.w/2,card.y+card.h/2);};menuLayer.append(b);});
-}
-function buildAdventure(type,round){
-  const g={done:0,goal:type==='orchard'?6:type==='pattern'?4:Math.min(5,3+Math.floor(round/3)),round,items:[],focus:0,clock:0,playback:true,heard:-1,step:0,flash:-1,flashT:0};
-  if(type==='orchard'){g.target=round%3;g.items=shuffle(Array.from({length:9},(_,i)=>({kind:i%3,collected:false})));}
-  if(type==='rhythm'){g.sequence=Array.from({length:g.goal},()=>Math.floor(rnd(0,3)));g.items=[0,1,2].map(kind=>({kind}));}
-  if(type==='pattern'){g.items=[0,1,2].map(kind=>({kind}));nextPattern(g);}
-  level={type,adventure:g,pieces:[],targets:[],cheered:false};layout();resetPhase();
-  cvs.setAttribute('aria-label',GAME_LABELS[type]+'. '+({orchard:'Sepetteki meyveleri ağaçtan topla.',rhythm:'Işıkları izle, sonra aynı sırayla müzik tuşlarına dokun.',pattern:'Dizideki eksik şekli seç.'}[type]));
-}
-function nextPattern(g){const a=(g.round+g.done)%3,b=(a+1)%3;g.series=g.round<3?[a,b,a,b,a]:[a,a,b,a,a];g.answer=b;g.items=shuffle(g.items);}
-function layoutAdventure(){
-  const g=level.adventure,uh=H-safe.top-safe.bottom;unit=Math.min(W,uh)*.085;
-  const aw=Math.min(W-safe.left-safe.right-32,640),left=(W-aw)/2;
-  g.items.forEach((p,i)=>{p.r=Math.min(aw/(level.type==='orchard'?9:8),uh*.09,56);p.x=left+aw*((i%3)+.5)/3;p.y=safe.top+uh*(level.type==='orchard'?.40+Math.floor(i/3)*.145:.68);});
-}
-function tapAdventure(x,y){
-  if(phase!=='play')return;const g=level.adventure;
-  if(level.type==='rhythm'&&Math.hypot(x-W/2,y-(safe.top+(H-safe.top-safe.bottom)*.38))<32){g.playback=true;g.clock=0;g.heard=-1;g.step=0;g.done=0;return;}
-  const p=g.items.find(p=>!p.collected&&Math.hypot(x-p.x,y-p.y)<=p.r*1.3);if(!p)return;
-  const correct=level.type==='orchard'?p.kind===g.target:level.type==='pattern'?p.kind===g.answer:!g.playback&&p.kind===g.sequence[g.step];
-  if(level.type==='rhythm'&&g.playback)return;
-  g.flash=p.kind;g.flashT=.35;note(PENTA[p.kind],0,.4);
-  if(!correct){g.hint=1;return;}
-  burst(p.x,p.y,PALETTE[p.kind],REDUCED?4:14);mascotCheer();g.done++;
-  if(level.type==='orchard'){p.collected=true;g.target=(g.target+1)%3;}
-  if(level.type==='rhythm')g.step++;
-  if(g.done>=g.goal){phase='win';phaseT=0;return;}
-  if(level.type==='pattern')nextPattern(g);
-}
-function updateAdventure(dt){
-  const g=level.adventure;g.flashT=Math.max(0,g.flashT-dt);g.hint=Math.max(0,(g.hint||0)-dt);
-  if(phase==='play'&&level.type==='rhythm'&&g.playback){g.clock+=dt;const i=Math.floor((g.clock-.5)/.8);if(i>=g.sequence.length){g.playback=false;g.flash=-1;}else if(i>=0&&i!==g.heard){g.heard=i;g.flash=g.sequence[i];g.flashT=.5;note(PENTA[g.flash],0,.45);}}
-}
-function drawAdventure(time){
-  const g=level.adventure,uh=H-safe.top-safe.bottom,cx=W/2;
-  const title=phase==='win'?'Çok güzel!':level.type==='orchard'?'Sepetteki meyveyi bul':level.type==='pattern'?'Sırada hangisi var?':g.playback?'Önce dinle ve izle':'Şimdi sıra sende';
-  label(title,cx,safe.top+uh*.245,Math.min(19,W*.048));
-  if(level.type==='orchard'){
-    g.items.forEach((p,i)=>{if(p.collected)return;ctx.save();ctx.globalAlpha=.30;orb(p.x,p.y,p.r*1.45,'#86CFA5');orb(p.x-p.r*.65,p.y-p.r*.5,p.r*.8,'#9BD8AC');ctx.restore();fruit(p.kind,p.x,p.y+(REDUCED?0:Math.sin(time*1.5+i)*2),p.r);});
-    basket(cx,safe.top+uh*.84,Math.min(uh*.065,46));fruit(g.target,cx,safe.top+uh*.81,Math.min(uh*.036,25));
-  }else if(level.type==='pattern'){
-    const aw=Math.min(W-28,560),cell=aw/6;
-    for(let i=0;i<6;i++){const x=(W-aw)/2+cell*(i+.5),y=safe.top+uh*.43;pill(x-cell*.44,y-cell*.5,cell*.88,cell,'#FFFFFFBB',14);if(i<5)toy(['star','circle','heart'][g.series[i]],x,y,cell*.27,PALETTE[g.series[i]]);else label('?',x,y,cell*.5,'#7299B4');}
-    g.items.forEach(p=>{pill(p.x-p.r*1.3,p.y-p.r*1.3,p.r*2.6,p.r*2.6,'#FFFFFFD9',20);toy(['star','circle','heart'][p.kind],p.x,p.y,p.r*.8,PALETTE[p.kind]);});
-  }else{
-    const y=safe.top+uh*.38;orb(cx,y,27,'#FFFFFFD9');ctx.strokeStyle='#6D8EA8';ctx.lineWidth=3;ctx.beginPath();ctx.arc(cx,y,11,-.4,Math.PI*1.6);ctx.stroke();ctx.beginPath();ctx.moveTo(cx+5,y-15);ctx.lineTo(cx+5,y-7);ctx.lineTo(cx-3,y-10);ctx.fillStyle='#6D8EA8';ctx.fill();
-    for(let i=0;i<g.goal;i++)orb(cx+(i-(g.goal-1)/2)*24,safe.top+uh*.49,7,i<g.done?'#62BE9D':g.playback&&i===g.heard?'#B297EB':'#CFDCE7');
-    g.items.forEach(p=>musicPad(p.x,p.y,p.r,p.kind,g.flashT>0&&g.flash===p.kind));
-  }
-  if(g.hint)label('Bir daha deneyelim',cx,safe.top+uh*.31,13,'#6C879B');
-  if(keyboardMode&&document.activeElement===cvs&&g.items[g.focus]&&!g.items[g.focus].collected){const p=g.items[g.focus];ctx.strokeStyle='#518FCC';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.4,0,7);ctx.stroke();}
+  menuCards(menuKinds()).forEach(card=>{const b=document.createElement('button');b.type='button';b.className='menu-hit';b.setAttribute('aria-label',GAME_LABELS[card.kind]);Object.assign(b.style,{left:card.x+'px',top:card.y+'px',width:card.w+'px',height:card.h+'px'});b.onclick=()=>{audioInit();handleMenuTap(card.x+card.w/2,card.y+card.h/2);};menuLayer.append(b);});
 }
 // Character details apply to matching, memory and menu illustrations alike.
 const basicAnimalFace=animalFace;

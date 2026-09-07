@@ -9,11 +9,11 @@ EvisGame, 2–4 yaş çocuklar için tasarlanmış sakin ve cezasız bir mini oy
 - Normal, iOS ve Android maskable ikon setleri
 - Safe-area, yüksek DPI, yatay/dikey ekran ve çoklu dokunma desteği
 - Sürükle-bırak ve dokun-yerleştir kontrolleri
-- Yazısız, animasyonlu kategori menüsü ve her oyun için canlı döngü önizlemesi
+- Resimli, animasyonlu kategori menüsü ve her oyun için canlı döngü önizlemesi
 - Kart çevirme hafıza modu ve hareketli balonlara dokunma modu
 - 0–9 rakamlarını yalnızca rakam yüzeyinde çoklu çizgiyle çizme; hareketli iz rehberi, otomatik yakınlık kontrolü ve temiz rakama dönüşüm animasyonu
 - Bölümü yeniden başlatma ve onaylı ilerleme sıfırlama kontrolleri
-- Her 3–5 oyun arasında 5–10 saniyelik demo reklam; ebeveyn işlemi arkasında kalıcı demo reklamsız seçenek
+- Yönlendirmeli oyunlarda her 3–5 bölüm arasında 5–10 saniyelik demo reklam; ebeveyn işlemi arkasında kalıcı demo reklamsız seçenek
 - Ses, titreşim, azaltılmış hareket ve ekran kilidi uyumu
 - Yerel ilerleme kaydı; hiçbir kişisel veri veya ağ tabanlı analiz yok
 
@@ -35,25 +35,37 @@ Ardından `http://localhost:8080` adresini açın.
 
 Manifest ve service worker yolları göreli tanımlanmıştır; bu nedenle proje sitesi olarak `https://bozukartr.github.io/evisgame/` altında çalışır.
 
-## Mobil oyun bahçesi · v2
+## Dokun ve keşfet · v2.1
 
-- 11 mini oyun: mevcut sekiz oyuna meyve toplama, müzik sırası ve örüntü tamamlama eklendi.
-- Bahçe, Deniz ve Uzay dünyaları; dünya tercihi cihazda saklanır.
-- Büyük resimli kartlar, dokunmatik alanlarla aynı konumdaki erişilebilir menü düğmeleri, bölüm HUD'ı ve tamamlanma rozetleri.
-- Canvas ile çözünürlükten bağımsız meyveler, sepetler, müzik tuşları ve detaylandırılmış hayvanlar. Harici resim isteği yok.
-- Meyve bahçesinde sepette gösterilen türü toplayın. Müzik atölyesinde ışıklı sırayı izleyip tekrarlayın; dairesel ok gösterimi tekrar oynatır. Örüntü oyununda eksik şekli seçin.
-- Klavyede yön tuşları seçim, Enter/Space etkileşim sağlar. Menü düğmeleri Tab ile seçilebilir.
-- Mevcut kayıt anahtarı ve ebeveyn/reklam demo akışı korunur. Yeni dosya service worker önbelleğine dahil edilmiştir.
+Ana menüde altı serbest oyun bulunur. Sıra ezberleme, doğru cevap, süre sınırı veya zorunlu bölüm geçişi yoktur:
+
+- **Balonlar:** Her baloncuk patlatılır; boş alana dokunmak da renkli iz bırakır.
+- **Neşeli müzik:** Davul, ksilofon ve zil görsellerindeki altı tuş beklemeden çalınır. Farklı tuşlar farklı notalar üretir.
+- **Sihirli bahçe:** Filizlere dokunmak çiçekleri büyütür; açan çiçeklerden kelebekler çıkar.
+- **Meyve bahçesi:** Her meyve toplanabilir, sepete uçar ve yeniden belirir.
+- **Akvaryum:** Balıklar dokunulan yere ve parmağın hareketine doğru yüzer.
+- **Işık şöleni:** Gökyüzüne dokunmak renkli yıldız patlamaları oluşturur; parmakla gezdirme de desteklenir.
+
+Önceki eşleştirme, hafıza ve rakam çizme oyunları **Birlikte öğrenelim** alt menüsünde bulunur. Toplam altı serbest, yedi yönlendirmeli mod vardır.
+
+### Görseller ve kullanım
+
+- `assets/play/` içinde 12 özgün, yerel SVG: enstrümanlar, çiçek, kelebek, balık, kaplumbağa, roket, baloncuk ve meyveler.
+- Dokunma, parmağı gezdirme ve çoklu dokunma; hareket iptali ve pencere odağı kaybında temizlenen giriş durumu.
+- Serbest oyunlarda küçük ödüller oyunu durdurmaz ve reklam demosu açılmaz. Önceki yıldızlar ve oyun kayıtları korunur; keşif sayıları ayrıca kaydedilir.
+- Hareket azaltma tercihi, sınırlı efekt sayısı ve ekran boyutuna göre yerleşim.
+- Bahçe, Deniz ve Uzay dış dünya temaları korunur. Tüm JavaScript/SVG dosyaları çevrimdışı uygulama kabuğunda önbelleğe alınır.
+- Klavyede Tab ile menü, yön tuşlarıyla oyuncak seçimi, Enter/Space ile etkileşim.
 
 ### Geliştirme kontrolü
 
-`index.html` temel oyun döngüsünü, `playground.js` görsel dünyaları, menüyü ve yeni mini oyunları içerir. Framework veya derleme adımı gerekmez.
+`index.html` temel oyun döngüsünü, `playground.js` menüyü, `sensory.js` serbest oyunları, `touch-art.js` SVG yüklemeyi içerir. Framework veya derleme adımı gerekmez.
 
-Canvas ve oyun mantığı kontrolleri için Node.js ve `@napi-rs/canvas` gerekir:
+Node.js ve `@napi-rs/canvas` ile Canvas/oyun mantığı kontrolleri:
 
 ```bash
 npm install --no-save @napi-rs/canvas
 node tests/playground.cjs
 ```
 
-İsteğe bağlı `EVIS_RENDER_DIR=/tmp/evis-renders` değişkeniyle Canvas ekran çıktıları alınır. Kontroller dört ekran ölçüsünde 11 modun çizimini, yeni oyunların tamamlanmasını, yanlış seçimleri, müzik gösterimi sırasında giriş kilidini ve ilerleme kaydını doğrular. Bu kontroller gerçek telefon tarayıcısının dokunma, ses ve PWA testinin yerine geçmez.
+`EVIS_RENDER_DIR=/tmp/evis-renders` ile Canvas ekran çıktıları alınır. Kontroller 13 modu dört ekran ölçüsünde çizer; SVG yüklenmesini, anında tepkiyi, kesintisiz oyunu, seri dokunmalarda efekt sınırını, çoklu dokunma/gezdirme/iptali ve kayıtları doğrular. Gerçek telefon tarayıcısının dokunma, ses, DOM ve PWA testinin yerine geçmez.
