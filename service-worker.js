@@ -1,12 +1,16 @@
 "use strict";
 
-const CACHE_VERSION = "evisgame-v2.1.0";
+const CACHE_VERSION = "evisgame-v2.2.0";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./playground.js",
   "./touch-art.js",
   "./sensory.js",
+  "./studios.js",
+  "./vendor/matter-0.20.0.min.js",
+  "./assets/play/palette.svg",
+  "./assets/play/blocks.svg",
   "./assets/play/apple.svg",
   "./assets/play/bell.svg",
   "./assets/play/bubble.svg",

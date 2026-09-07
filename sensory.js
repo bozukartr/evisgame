@@ -1,25 +1,29 @@
 /* Touch-first play: every gesture produces feedback; there is no correct answer. */
-const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks'];
+const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks','paint','tumble'];
 const sensoryTotals={};
 for(const kind of FREE_PLAY){const n=Number(savedProgress.sensoryTotals?.[kind]);sensoryTotals[kind]=Number.isSafeInteger(n)&&n>0?n:0;}
 const touchPointers=new Map();
-const SENSORY_HINTS={pop:'Dokun, pıt pıt!',rhythm:'İstediğin gibi çal',pattern:'Dokun, çiçekler açsın',orchard:'Dokun, meyveler uçsun',aquarium:'Balıklarla oyna',fireworks:'Gökyüzünü renklendir'};
+const SENSORY_HINTS={paint:'Parmağın fırçan',tumble:'Dokun, devir, yeniden kur',pop:'Dokun, pıt pıt!',rhythm:'İstediğin gibi çal',pattern:'Dokun, çiçekler açsın',orchard:'Dokun, meyveler uçsun',aquarium:'Balıklarla oyna',fireworks:'Gökyüzünü renklendir'};
 function artOrToy(name,x,y,size,rotation=0){
   if(!drawTouchArt(name,x,y,size,rotation))toy('star',x,y,size*.28,PALETTE[TOUCH_ART_NAMES.indexOf(name)%6]||PALETTE[1]);
 }
 function drawSensoryPreview(kind,x,y,s,t){
+  if(kind==='paint'||kind==='tumble'){artOrToy(kind==='paint'?'palette':'blocks',x,y,s*.88);return;}
+  if(kind==='more'){artOrToy('fish',x-s*.17,y,s*.55);artOrToy('rocket',x+s*.19,y,s*.55);return;}
   const tilt=REDUCED?0:Math.sin(t*1.6)*.08;
   const names={pop:['bubble','bubble'],rhythm:['drum','xylophone'],pattern:['flower','butterfly'],orchard:['apple','pear'],aquarium:['fish','turtle'],fireworks:['rocket','rocket'],learn:['bell','flower']}[kind];
   artOrToy(names[0],x-s*.21,y,s*.61,tilt);artOrToy(names[1],x+s*.21,y-s*.045,s*.52,-tilt);
   if(kind==='fireworks')for(let i=0;i<3;i++)toy('star',x+(i-1)*s*.32,y-s*.23,s*.06,PALETTE[i]);
 }
 function buildAdventure(type,round){
+  if(type==='paint'||type==='tumble'){buildStudio(type);return;}
   const count={pop:8,rhythm:6,pattern:6,orchard:9,aquarium:5,fireworks:3}[type];
   const g={free:true,round,total:sensoryTotals[type]||0,focus:0,effects:[],flights:[],reward:0,soundAt:-1,soundCount:0,items:Array.from({length:count},(_,i)=>({kind:i%3,id:i,pulse:0,stage:0,cooldown:0,dx:0,dy:0,travel:0,turn:1}))};
   level={type,adventure:g,pieces:[],targets:[],cheered:false};resetPhase();phase='play';layoutAdventure();
   cvs.setAttribute('aria-label',GAME_LABELS[type]+'. '+SENSORY_HINTS[type]+'. Her dokunuş serbest. Parmakla gezdirerek de oynayabilirsin.');
 }
 function layoutAdventure(){
+  if(level.adventure.studio){layoutStudio();return;}
   const g=level.adventure,uh=H-safe.top-safe.bottom,wide=W>H*1.25;
   const w=Math.min(W-safe.left-safe.right-24,800),x=(W-w)/2,top=safe.top+Math.max(92,uh*.23),bottom=H-safe.bottom-78;
   g.box={x,y:top,w,h:Math.max(90,bottom-top)};
@@ -58,17 +62,21 @@ function drawSensoryHud(){
 function touchAllowed(){return appView==='game'&&!!level?.adventure&&phase==='play'&&resetSheet.hidden&&demoAd.hidden&&parentSheet.hidden&&document.visibilityState!=='hidden';}
 function startTouch(e){
   if(!touchAllowed())return;
+  if(level.adventure.studio){startStudioTouch(e);return;}
   touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,at:time,item:-1});
   tapAdventure(e.clientX,e.clientY);try{cvs.setPointerCapture(e.pointerId);}catch(err){}
 }
 function moveTouch(e){
   const d=touchPointers.get(e.pointerId);if(!d)return false;
   if(!touchAllowed()){endTouch(e);return true;}
+  if(level.adventure.studio){moveStudioTouch(e);return true;}
   e.preventDefault();
   if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<12||time-d.at<.075)return true;
   d.x=e.clientX;d.y=e.clientY;d.at=time;tapAdventure(d.x,d.y,true);return true;
 }
-function endTouch(e){if(!touchPointers.has(e.pointerId))return;touchPointers.delete(e.pointerId);try{if(cvs.hasPointerCapture(e.pointerId))cvs.releasePointerCapture(e.pointerId);}catch(err){}}
+function endTouch(e){if(!touchPointers.has(e.pointerId))return;
+  if(level?.adventure?.studio)endStudioTouch(e);
+touchPointers.delete(e.pointerId);try{if(cvs.hasPointerCapture(e.pointerId))cvs.releasePointerCapture(e.pointerId);}catch(err){}}
 function effect(g,e){g.effects.push(e);if(g.effects.length>96)g.effects.splice(0,g.effects.length-96);}
 function sparkle(g,x,y,color,n=8,kind='spark'){
   for(let i=0;i<(REDUCED?Math.min(n,3):n);i++){const a=i/n*Math.PI*2+rnd(-.2,.2),speed=rnd(25,95);effect(g,{kind,x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:0,max:rnd(.55,1.05),color,r:rnd(3,7)});}
@@ -82,6 +90,7 @@ function playTouchSound(type,p,fallback){
 }
 function tapAdventure(x,y,drag=false){
   if(!touchAllowed())return;
+  if(level.adventure.studio){tapStudio(x,y);return;}
   const g=level.adventure,b=g.box;
   x=clamp(x,b.x+8,b.x+b.w-8);y=clamp(y,b.y+8,b.y+b.h-8);
   const p=g.items.find(p=>Math.hypot(x-p.x,y-p.y)<p.r*1.2),color=PALETTE[(p?.id??Math.floor(x/60))%6];
@@ -126,6 +135,7 @@ function tapAdventure(x,y,drag=false){
   if(parts.length>120)parts.splice(0,parts.length-120);
 }
 function updateAdventure(dt){
+  if(level.adventure.studio){updateStudio(dt);return;}
   const g=level.adventure,b=g.box;g.reward=Math.max(0,g.reward-dt);
   for(const p of g.items){p.pulse=Math.max(0,p.pulse-dt*3);p.cooldown=Math.max(0,p.cooldown-dt);
     if(level.type==='aquarium'){
@@ -137,6 +147,7 @@ function updateAdventure(dt){
   g.effects=g.effects.filter(e=>{e.life+=dt;if(!REDUCED){e.x+=e.vx*dt||0;e.y+=e.vy*dt||0;}return e.life<e.max;});
 }
 function drawAdventure(time){
+  if(level.adventure.studio){drawStudio(time);return;}
   const g=level.adventure,b=g.box;
   ctx.drawImage(g.scene,b.x,b.y,b.w,b.h);
   if(H-safe.top-safe.bottom>=500)label(SENSORY_HINTS[level.type],W/2,b.y-22,14,'#688496');

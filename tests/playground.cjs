@@ -13,7 +13,7 @@ const context=vm.createContext(sandbox),run=code=>vm.runInContext(code,context);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 (async()=>{
 run(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-for(const file of ['touch-art.js','playground.js','sensory.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
+for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
 assert((await run('touchArtReady')).every(Boolean),'all 12 SVG assets load');
 run('resize(); started=true; adsDisabled=true;');
 const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
@@ -21,7 +21,7 @@ for(const asset of run('TOUCH_ART_NAMES'))assert(sw.includes('./assets/play/'+as
 const render=name=>{if(process.env.EVIS_RENDER_DIR){fs.mkdirSync(process.env.EVIS_RENDER_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.EVIS_RENDER_DIR,name+'.png'),els.get('c').toBuffer('image/png'));}};
 for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
   sandbox.innerWidth=w;sandbox.innerHeight=h;run("resize(); openMenu(); drawGameMenu(0);");
-  assert.equal(run('menuLayer.children.length'),7);
+  assert.equal(run('menuLayer.children.length'),8);
   assert(run('menuCards(MAIN_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=0&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
   render(`menu-${w}x${h}`);
   for(const type of run('TYPES')){
@@ -29,10 +29,15 @@ for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
     for(let i=1;i<=40;i++)run(`frame(last+50);`);
     assert.equal(run('phase'),'play',type);
     if(w===390)render(type);
+    if(['paint','tumble'].includes(type)){
+      assert(run('level.adventure.box.x>=0&&level.adventure.box.y>=0&&level.adventure.box.x+level.adventure.box.w<=W&&level.adventure.box.y+level.adventure.box.h<=H-70'));
+      assert(run('level.adventure.controls.x>=0&&level.adventure.controls.x+level.adventure.controls.w<=W'),'toolbar stays in viewport');
+      assert(run('level.adventure.controls.y+(level.type==="paint"?(W>H*1.25?192:96):44)<=H-safe.bottom-65'),'toolbar clears home controls');
+    }
   }
 }
 sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
-for(const type of run('FREE_PLAY')){
+for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble'].includes(t))){
   run(`beginMode('${type}');`);
   assert.equal(run('phase'),'play','no intro lock');
   const before=run('level.adventure.total');
@@ -65,6 +70,37 @@ assert.equal(run('level.adventure.items[0].stage'),3,'flower grows without corre
 run("beginMode('aquarium');tapAdventure(130,400);");assert(run('level.adventure.items.every(p=>p.travel===2)'),'all fish follow touch');
 run("beginMode('fireworks');tapAdventure(195,400);updateAdventure(.18);ctx.drawImage(bgCanvas,0,0,W,H);drawTopBar();drawAdventure(0);");render('fireworks-reaction');
 run("openMenu('learnMenu');");assert.equal(run('menuLayer.children.length'),3);
+// Paint: immediate marks, separate fingers, undoable clear, bounded history and persisted raster.
+run("beginMode('paint');");
+run('const pb=level.adventure.box;startTouch({pointerId:101,clientX:pb.x+30,clientY:pb.y+40});moveTouch({pointerId:101,clientX:pb.x+pb.w-40,clientY:pb.y+pb.h-40,preventDefault(){}});endTouch({pointerId:101});');
+assert(run('painting.canvas.getContext("2d").getImageData(500,500,1,1).data[3]>0'),'continuous stroke is drawn');
+const painted=run('painting.canvas.toDataURL()');
+run('painting.tool="eraser";tapStudio(pb.x+pb.w*500/1024,pb.y+pb.h*500/1024);');assert.equal(run('painting.canvas.getContext("2d").getImageData(500,500,1,1).data[3]'),0,'eraser removes paint');run('undoPaint();painting.tool="brush";');assert.equal(run('painting.canvas.toDataURL()'),painted);run('clearPaint();');assert.equal(run('painting.canvas.getContext("2d").getImageData(500,500,1,1).data[3]'),0);run('undoPaint();');assert.equal(run('painting.canvas.toDataURL()'),painted,'clear can be undone exactly');
+run('painting.tool="rainbow";startTouch({pointerId:102,clientX:pb.x+30,clientY:pb.y+pb.h*.5});startTouch({pointerId:103,clientX:pb.x+pb.w*.65,clientY:pb.y+25});');
+assert.equal(run('painting.active.size'),2);run('cancelAllPointers();');assert.equal(run('painting.active.size'),0);
+run('painting.tool="stamp";tapStudio(pb.x+pb.w*.25,pb.y+pb.h*.25);painting.tool="brush";for(let i=0;i<70;i++)tapStudio(pb.x+20+i*2,pb.y+25);persistPaint();');
+assert(run('painting.history.length<=48'),'bounded undo history');assert(saved.get('evisgame-paint-v1').startsWith('data:image/png'));
+const retained=run('painting.canvas.toDataURL()');run('openMenu();beginMode("paint");');assert.equal(run('painting.canvas.toDataURL()'),retained,'menu return retains artwork');
+run('ctx.drawImage(bgCanvas,0,0,W,H);drawTopBar();drawStudio(0);');render('paint-artwork');
+// Tumble: stable contacts, rotated falling bodies, multi-touch constraints and bounded body count.
+run("beginMode('tumble');for(let i=0;i<600;i++)updateStudio(1/120);");
+assert(run('level.adventure.toys.every(p=>Number.isFinite(p.position.x+p.position.y+p.angle)&&p.bounds.max.y<=level.adventure.floor+5)'),'stack stays on floor');
+const beforePush=run('level.adventure.toys.map(p=>({x:p.position.x,y:p.position.y}))');
+run('pushToys(level.adventure);for(let i=0;i<300;i++)updateStudio(1/120);');
+assert(run('level.adventure.toys.some(p=>Math.abs(p.angle)>.1)'),'toys actually rotate and topple');
+assert(run('level.adventure.toys.some(p=>p.position.y>level.adventure.floor-level.adventure.size*1.5)'),'fallen toys settle');
+run('ctx.drawImage(bgCanvas,0,0,W,H);drawTopBar();drawStudio(0);');render('tumble-toppled');
+run('rebuildToys(level.adventure,false);const a=level.adventure.items[0],b=level.adventure.items[1];startTouch({pointerId:201,clientX:a.x,clientY:a.y});startTouch({pointerId:202,clientX:b.x,clientY:b.y});');
+assert.equal(run('Matter.Composite.allConstraints(level.adventure.engine.world).length'),2);
+run('moveTouch({pointerId:201,clientX:level.adventure.box.x+45,clientY:level.adventure.box.y+60,preventDefault(){}});for(let i=0;i<240;i++)updateStudio(1/120);');
+assert(run('Math.hypot(touchPointers.get(201).body.position.x-(level.adventure.box.x+45),touchPointers.get(201).body.position.y-(level.adventure.box.y+60))<30'),'held block follows finger target');
+run('cancelAllPointers();');assert.equal(run('Matter.Composite.allConstraints(level.adventure.engine.world).length'),0);
+run('for(let i=0;i<100;i++)addToyBall(level.adventure);');assert.equal(run('level.adventure.toys.length'),24,'body cap');
+for(let design=0;design<3;design++){
+ run(`level.adventure.design=${design};rebuildToys(level.adventure,false);for(let i=0;i<180;i++)updateStudio(1/120);ctx.drawImage(bgCanvas,0,0,W,H);drawTopBar();drawStudio(0);`);render('tumble-layout-'+design);
+ assert(run('level.adventure.toys.every(p=>Number.isFinite(p.position.x+p.position.y))'));
+}
+run('openMenu();');assert.equal(run('studioControls.hidden'),true,'studio controls leave with game');
 for(const type of ['color','shape','size','count','animal']){
   run(`beginMode('${type}');phase='play';level.pieces.forEach(autoPlace);`);assert.equal(run('phase'),'win',type);
 }
@@ -72,5 +108,5 @@ run("beginMode('memory');phase='play';");
 run('for(let key=0;key<level.memory.pairs;key++){const pair=level.pieces.filter(p=>p.key===key);revealMemoryCard(pair[0]);revealMemoryCard(pair[1]);time+=2;updateMemory(2);}');assert.equal(run('phase'),'win','memory');
 for(let w=0;w<3;w++){run(`world=${w};buildBackground();openMenu();drawGameMenu(1);`);render('world-'+w);}
 run('drawStart(0);');render('start');
-console.log('PASS: 13 modes × 4 viewports; 12 SVGs; 6 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
+console.log('PASS: 15 modes × 4 viewports; 14 SVGs; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
