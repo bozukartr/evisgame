@@ -2,8 +2,8 @@
 const WORLD_NAMES=['Bahçe','Deniz','Uzay'];
 let world=0;
 try { world=clamp(Number(localStorage.getItem('evisgame-world'))||0,0,2)|0; } catch(e) {}
-const GAME_LABELS={match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Neşeli müzik',pattern:'Sihirli bahçe',aquarium:'Akvaryum',fireworks:'Işık şöleni',learn:'Birlikte öğrenelim',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
-const CARD_COLORS={match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#C3E6B0',aquarium:'#93DAD9',fireworks:'#CCBEED',learn:'#F4DDB2',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
+const GAME_LABELS={paint:'Boya dünyası',tumble:'Oyuncakları devir',more:'Diğer oyunlar',match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Neşeli müzik',pattern:'Sihirli bahçe',aquarium:'Akvaryum',fireworks:'Işık şöleni',learn:'Birlikte öğrenelim',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
+const CARD_COLORS={paint:'#F8C9DB',tumble:'#F6D491',more:'#B7E0E9',match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#C3E6B0',aquarium:'#93DAD9',fireworks:'#CCBEED',learn:'#F4DDB2',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
 function pill(x,y,w,h,color,r=20){ctx.beginPath();roundRectPath(ctx,x,y,w,h,Math.min(r,h/2));ctx.fillStyle=color;ctx.fill();}
 function label(text,x,y,size=16,color=INK){ctx.fillStyle=color;ctx.font=`800 ${size}px ui-rounded,system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);}
 function orb(x,y,r,color){ctx.beginPath();ctx.arc(x,y,Math.max(.1,r),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
@@ -63,7 +63,7 @@ function drawMenuCard(card,time){
   ctx.save();ctx.beginPath();roundRectPath(ctx,x,y,w,h,22);ctx.clip();pill(x+4,y+4,w-8,h*.72,CARD_COLORS[kind],18);orb(x+w*.95,y+h*.08,s*.45,'#FFFFFF28');orb(x+w*.06,y+h*.65,s*.23,'#FFFFFF24');
   const bob=REDUCED?0:Math.sin(time*1.8+kind.length)*2;
   ctx.translate(0,bob);
-  if(['pop','rhythm','pattern','orchard','aquarium','fireworks','learn'].includes(kind)){drawSensoryPreview(kind,cx,cy,s,time);}
+  if(['pop','rhythm','pattern','orchard','aquarium','fireworks','learn','paint','tumble','more'].includes(kind)){drawSensoryPreview(kind,cx,cy,s,time);}
   else if(kind==='memory'){for(const i of [-1,1]){ctx.save();ctx.translate(cx+i*s*.2,cy);ctx.rotate(i*.12);pill(-s*.17,-s*.23,s*.34,s*.46,i<0?'#9A7ADB':'#FFFFFF',s*.065);toy(i<0?'star':'heart',0,0,s*.095,i<0?'#FCE19B':'#F48BB0');ctx.restore();}}
   else if(kind==='numberdraw'){label('3',cx,cy,s*.6,'#329A79');toy('star',cx+s*.3,cy-s*.16,s*.085,'#FFEDB4');}
   else if(kind==='animal'){toy('cat',cx-s*.18,cy,s*.18,'#FFB884');toy('frog',cx+s*.2,cy+s*.04,s*.17,'#83D0A4');}
@@ -75,7 +75,7 @@ function drawMenuCard(card,time){
 };
 function drawGameMenu(time){
   ctx.drawImage(bgCanvas,0,0,W,H);const uh=H-safe.top-safe.bottom,wide=W>H*1.25;
-  label(appView==='matchMenu'?'Eşleştirme adası':appView==='learnMenu'?'Birlikte öğrenelim':'Dokun ve keşfet',W/2,safe.top+uh*.075,wide?24:28);
+  label(appView==='matchMenu'?'Eşleştirme adası':appView==='learnMenu'?'Birlikte öğrenelim':appView==='moreMenu'?'Keşfetmeye devam':'Dokun ve keşfet',W/2,safe.top+uh*.075,wide?24:28);
   label(appView==='matchMenu'?'Birlikte keşfedelim':'Her dokunuşta yeni bir sürpriz',W/2,safe.top+uh*.122,12,'#637F95');
   if(!wide){pill(W/2-66,safe.top+uh*.158,132,25,'#FFFFFFBA',14);label(`${levelIndex} keşif  ·  ${stars} yıldız`,W/2,safe.top+uh*.158+13,11,'#60817F');}
   menuCards(menuKinds()).forEach(card=>drawMenuCard(card,time));drawParts();
@@ -103,7 +103,7 @@ const style=document.createElement('style');style.textContent=`
 `;document.head.append(style);
 WORLD_NAMES.forEach((name,i)=>{const b=document.createElement('button');b.type='button';b.textContent=name;b.onclick=()=>{world=i;try{localStorage.setItem('evisgame-world',world);}catch(e){}buildBackground();syncMenuButtons();sndSel();};worldBar.append(b);});
 function syncMenuButtons(){
-  const visible=['menu','matchMenu','learnMenu'].includes(appView);menuLayer.replaceChildren();worldBar.hidden=!visible;
+  const visible=['menu','matchMenu','learnMenu','moreMenu'].includes(appView);menuLayer.replaceChildren();worldBar.hidden=!visible;
   [...worldBar.children].forEach((b,i)=>b.setAttribute('aria-pressed',String(world===i)));
   if(!visible)return;
   menuCards(menuKinds()).forEach(card=>{const b=document.createElement('button');b.type='button';b.className='menu-hit';b.setAttribute('aria-label',GAME_LABELS[card.kind]);Object.assign(b.style,{left:card.x+'px',top:card.y+'px',width:card.w+'px',height:card.h+'px'});b.onclick=()=>{audioInit();handleMenuTap(card.x+card.w/2,card.y+card.h/2);};menuLayer.append(b);});

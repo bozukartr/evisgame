@@ -69,3 +69,26 @@ node tests/playground.cjs
 ```
 
 `EVIS_RENDER_DIR=/tmp/evis-renders` ile Canvas ekran çıktıları alınır. Kontroller 13 modu dört ekran ölçüsünde çizer; SVG yüklenmesini, anında tepkiyi, kesintisiz oyunu, seri dokunmalarda efekt sınırını, çoklu dokunma/gezdirme/iptali ve kayıtları doğrular. Gerçek telefon tarayıcısının dokunma, ses, DOM ve PWA testinin yerine geçmez.
+
+## Boya Dünyası ve Oyuncakları Devir · v2.2
+
+İki yeni oyun ana menünün ilk sırasında bulunur. Akvaryum ve Işık Şöleni, Diğer oyunlar kartından açılır. Toplam 15 mod vardır.
+
+### Boya Dünyası
+
+- Altı renk, kalın ve yumuşak uçlu fırça, kesintisiz gökkuşağı çizgileri, yıldız/kalp damgaları ve silgi.
+- Birden fazla parmakla birbirine bağlanmayan ayrı çizgiler; ekran çevrildiğinde oranı korunan tuval.
+- Son 48 işlemi geri alma. Tuvali temizlemek de geri alınabilir; eski işlemler çizimden silinmeden temel resme birleştirilir.
+- Menüye dönünce aynı çizim korunur. Cihaz depolaması uygunsa çizim PNG olarak otomatik kaydedilir. Kayıt yapılamasa da oturumdaki çizim korunur.
+- Çizim Canvas üzerinde önbelleğe alınır; her animasyon karesinde tüm çizgiler yeniden çizilmez.
+
+### Oyuncakları Devir
+
+- Gerçek çarpışmalar, yerçekimi, sürtünme, dönüş ve sekme. Dokunarak itme; sürükleyerek kaldırma ve bırakma.
+- Piramit, köprü ve domino düzenleri. Aynı yapıyı tekrar kurma, başka yapıya geçme ve top ekleme düğmeleri.
+- Çoklu dokunma için ayrı sürükleme bağlantıları. Menüye çıkıldığında ve dokunma iptalinde bağlantılar temizlenir.
+- Sabit fizik zaman adımı, uyuyan cisimler ve en fazla 24 oyuncak ile sınırlı işlem yükü.
+
+Fizik motoru Matter.js 0.20.0 yerel olarak `vendor/` içinde bulunur; çalışma sırasında CDN isteği yapılmaz. MIT lisansı `vendor/MATTER-LICENSE.txt` içindedir. Yeni scriptler ve SVG kapaklar çevrimdışı önbelleğe dahildir.
+
+Testler ayrıca boya çizgisi, geri alınabilir temizleme, çoklu parmak, sınırlı geçmiş, kayıt ve menüden dönüşü; oyuncakların zeminde kalmasını, devrilmesini, üç düzeni, sürükleme bağlantılarının temizlenmesini ve cisim sınırını doğrular.
