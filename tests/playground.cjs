@@ -13,8 +13,8 @@ const context=vm.createContext(sandbox),run=code=>vm.runInContext(code,context);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 (async()=>{
 run(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
-assert((await run('touchArtReady')).every(Boolean),'all 12 SVG assets load');
+for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
+assert((await run('touchArtReady')).every(Boolean),'all SVG assets load');
 run('resize(); started=true; adsDisabled=true;');
 const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 for(const asset of run('TOUCH_ART_NAMES'))assert(sw.includes('./assets/play/'+asset+'.svg'),'SVG is cached for offline play');
@@ -108,5 +108,45 @@ run("beginMode('memory');phase='play';");
 run('for(let key=0;key<level.memory.pairs;key++){const pair=level.pieces.filter(p=>p.key===key);revealMemoryCard(pair[0]);revealMemoryCard(pair[1]);time+=2;updateMemory(2);}');assert.equal(run('phase'),'win','memory');
 for(let w=0;w<3;w++){run(`world=${w};buildBackground();openMenu();drawGameMenu(1);`);render('world-'+w);}
 run('drawStart(0);');render('start');
-console.log('PASS: 15 modes × 4 viewports; 14 SVGs; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
+// Character animation: temporal states, local gaze, independent personalities and cancellation.
+run("const actorTest=character(4);characterEvent(actorTest,'hold');updateCharacter(actorTest,1/60,{speed:8});");
+assert.equal(run('actorTest.mode'),'held','held expression takes priority over velocity');
+run("characterEvent(actorTest,'impact',1);");assert.equal(run('actorTest.event'),'hello','contacts do not interrupt a held toy');
+run("characterEvent(actorTest,'cancel');updateCharacter(actorTest,1/60);");assert.equal(run('actorTest.held'),false);assert.equal(run('actorTest.event'),null);
+run("characterEvent(actorTest,'impact',1);updateCharacter(actorTest,1/60);const firstImpact=actorTest.eventLife;characterEvent(actorTest,'impact',1);");
+assert.equal(run('actorTest.eventLife'),run('firstImpact'),'contact cooldown prevents restart');assert.equal(run('actorTest.mode'),'impact');
+run('for(let i=0;i<20;i++)updateCharacter(actorTest,1/60);');assert.equal(run('actorTest.mode'),'giggle','landing resolves into a happy recovery');
+run('for(let i=0;i<90;i++)updateCharacter(actorTest,1/60);');assert.equal(run('actorTest.event'),null,'reaction expires');
+run("const gazeTest=character(0);for(let i=0;i<60;i++)updateCharacter(gazeTest,1/60,{x:100,y:100,angle:Math.PI/2,target:{x:100,y:200}});");
+assert(run('gazeTest.gazeX>.9&&Math.abs(gazeTest.gazeY)<.01'),'gaze uses rotated toy coordinates');
+run('for(let i=0;i<60;i++)updateCharacter(gazeTest,1/60,{x:100,y:100,flip:-1,target:{x:200,y:100}});');assert(run('gazeTest.gazeX<-.9'),'mirrored fish look toward the finger');
+run("const petTest=character(1);for(let i=0;i<3;i++){characterEvent(petTest,'pet');updateCharacter(petTest,.05);}");assert.equal(run('petTest.mode'),'giggle','rapid petting produces laughter');
+run('const sleepTest=character(3);for(let i=0;i<720;i++)updateCharacter(sleepTest,1/60);');assert.equal(run('sleepTest.mode'),'sleepy');
+run("characterEvent(sleepTest,'pet');updateCharacter(sleepTest,1/60);");assert.equal(run('sleepTest.mode'),'hello','touch wakes a sleepy toy immediately');
+assert.equal(run('new Set(Array.from({length:6},(_,i)=>character(i).blinkAt)).size'),6,'blinks are staggered');
+if(process.env.EVIS_REDUCED==='1')assert(run('actorTest.squash===0&&actorTest.stretch===0&&actorTest.bob===0&&actorTest.tilt===0'),'reduced motion disables secondary motion');
+run("beginMode('tumble');const physicalToy=level.adventure.toys[0];const fixedArea=physicalToy.area;const fixedWidth=physicalToy.plugin.w;characterEvent(physicalToy.plugin.actor,'impact',1);for(let i=0;i<20;i++)updateToyCharacters(level.adventure,1/60);");
+assert.equal(run('physicalToy.area'),run('fixedArea'));assert.equal(run('physicalToy.plugin.w'),run('fixedWidth'),'visual squash does not change collision geometry');
+run('const heldItem=level.adventure.items[0];startTouch({pointerId:700,clientX:heldItem.x,clientY:heldItem.y});const heldActor=touchPointers.get(700).body.plugin.actor;endTouch({pointerId:700,type:"pointercancel"});');assert.equal(run('heldActor.held'),false);assert.equal(run('heldActor.event'),null,'pointer cancellation does not trigger release excitement');
+// Render a contact sheet and an actual continuous timeline with persistent actor state.
+if(process.env.EVIS_RENDER_DIR){
+ run('cvs.width=900;cvs.height=720;ctx.fillStyle="#F5F0E8";ctx.fillRect(0,0,900,720);');
+ const states=['idle','hold','impact','giggle','sleepy','watch'];
+ for(let row=0;row<states.length;row++)for(let col=0;col<6;col++){
+  const state=states[row];
+  run(`{const a=character(${col});if('${state}'==='sleepy'){for(let i=0;i<720;i++)updateCharacter(a,1/60);}else if('${state}'==='watch'){for(let i=0;i<30;i++)updateCharacter(a,1/60,{target:{x:90,y:-40}});}else{if('${state}'!=='idle')characterEvent(a,'${state}');for(let i=0;i<10;i++)updateCharacter(a,1/60);}drawLivingBlock({position:{x:${col*150+75},y:${row*120+60}},angle:0,plugin:{actor:a,w:86,h:86,shape:'block',color:${col}}});}`);
+ }
+ render('personality-expressions');
+ run('cvs.width=390;cvs.height=300;const timelineActor=character(4);');
+ for(let i=0;i<90;i++){
+  if(i===10)run("characterEvent(timelineActor,'hold');");
+  if(i===28)run("characterEvent(timelineActor,'release');");
+  if(i===40)run("characterEvent(timelineActor,'impact',.85);");
+  run(`updateCharacter(timelineActor,1/30,{x:195,y:150,target:{x:260,y:90},speed:${i>=28&&i<40?4:0}});ctx.fillStyle='#F5F0E8';ctx.fillRect(0,0,390,300);drawLivingBlock({position:{x:195,y:150},angle:0,plugin:{actor:timelineActor,w:150,h:150,shape:'block',color:4}});`);
+  render('animation-'+String(i).padStart(3,'0'));
+ }
+ run('resize();');
+}
+
+console.log('PASS: 15 modes × 4 viewports; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

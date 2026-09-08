@@ -18,7 +18,7 @@ function drawSensoryPreview(kind,x,y,s,t){
 function buildAdventure(type,round){
   if(type==='paint'||type==='tumble'){buildStudio(type);return;}
   const count={pop:8,rhythm:6,pattern:6,orchard:9,aquarium:5,fireworks:3}[type];
-  const g={free:true,round,total:sensoryTotals[type]||0,focus:0,effects:[],flights:[],reward:0,soundAt:-1,soundCount:0,items:Array.from({length:count},(_,i)=>({kind:i%3,id:i,pulse:0,stage:0,cooldown:0,dx:0,dy:0,travel:0,turn:1}))};
+  const g={free:true,round,total:sensoryTotals[type]||0,focus:0,effects:[],flights:[],reward:0,soundAt:-1,soundCount:0,items:Array.from({length:count},(_,i)=>({kind:i%3,id:i,actor:character(i),pulse:0,stage:0,cooldown:0,dx:0,dy:0,travel:0,turn:1}))};
   level={type,adventure:g,pieces:[],targets:[],cheered:false};resetPhase();phase='play';layoutAdventure();
   cvs.setAttribute('aria-label',GAME_LABELS[type]+'. '+SENSORY_HINTS[type]+'. Her dokunuş serbest. Parmakla gezdirerek de oynayabilirsin.');
 }
@@ -97,7 +97,7 @@ function tapAdventure(x,y,drag=false){
   effect(g,{kind:'ring',x,y,life:0,max:REDUCED?.25:.55,color,r:18});
   if(g.soundAt<0||time-g.soundAt>.065){g.soundAt=time;g.soundCount=0;}
   if(g.soundCount<4){playTouchSound(level.type,p,Math.floor(x/b.w*6)%6);g.soundCount++;}
-  if(p)p.pulse=1;
+  if(p){p.pulse=1;characterEvent(p.actor,'pet');}
   switch(level.type){
     case 'rhythm':{
       if(!p){sparkle(g,x,y,color,5,'note');break;}
@@ -106,11 +106,11 @@ function tapAdventure(x,y,drag=false){
     }
     case 'pattern':{
       const flower=p||g.items.reduce((a,q)=>Math.hypot(q.x-x,q.y-y)<Math.hypot(a.x-x,a.y-y)?q:a);
-      if(!drag||flower.cooldown<=0){flower.stage=Math.min(3,flower.stage+1);flower.pulse=1;flower.cooldown=.24;sparkle(g,flower.x,flower.y,color,10);if(flower.stage===3)effect(g,{kind:'butterfly',x:flower.x,y:flower.y-20,vx:rnd(-22,22),vy:-34,life:0,max:2.4,color,r:30});}
+      if(!drag||flower.cooldown<=0){if(!p)characterEvent(flower.actor,'pet');flower.stage=Math.min(3,flower.stage+1);flower.pulse=1;flower.cooldown=.24;sparkle(g,flower.x,flower.y,color,10);if(flower.stage===3)effect(g,{kind:'butterfly',x:flower.x,y:flower.y-20,vx:rnd(-22,22),vy:-34,life:0,max:2.4,color,r:30});}
       break;
     }
     case 'orchard':{
-      if(p&&p.cooldown<=0){p.cooldown=.65;g.flights.push({kind:p.kind,x:p.x,y:p.y,life:0,max:.6});if(g.flights.length>16)g.flights.shift();}
+      if(p&&p.cooldown<=0){p.cooldown=.65;g.flights.push({kind:p.kind,actor:p.actor,x:p.x,y:p.y,life:0,max:.6});if(g.flights.length>16)g.flights.shift();}
       else sparkle(g,x,y,color,5);break;
     }
     case 'pop':{
@@ -136,12 +136,13 @@ function tapAdventure(x,y,drag=false){
 }
 function updateAdventure(dt){
   if(level.adventure.studio){updateStudio(dt);return;}
-  const g=level.adventure,b=g.box;g.reward=Math.max(0,g.reward-dt);
+  updateCharactersClock(dt);const g=level.adventure,b=g.box;g.reward=Math.max(0,g.reward-dt);
   for(const p of g.items){p.pulse=Math.max(0,p.pulse-dt*3);p.cooldown=Math.max(0,p.cooldown-dt);
     if(level.type==='aquarium'){
       p.travel-=dt;if(p.travel<=0){p.tx=rnd(b.x+p.r,b.x+b.w-p.r);p.ty=rnd(b.y+p.r,b.y+b.h-p.r);p.travel=rnd(2,4);}
       p.turn=p.tx<p.x?-1:1;p.x=ease(p.x,p.tx,REDUCED?5:.8,dt);p.y=ease(p.y,p.ty,REDUCED?5:.8,dt);
     }
+    updateCharacter(p.actor,dt,{x:p.x,y:p.y,size:p.r*2,flip:level.type==='aquarium'?p.turn:1,target:characterTarget(p.x,p.y)});
   }
   g.flights=g.flights.filter(f=>{f.life+=dt;return f.life<f.max;});
   g.effects=g.effects.filter(e=>{e.life+=dt;if(!REDUCED){e.x+=e.vx*dt||0;e.y+=e.vy*dt||0;}return e.life<e.max;});
@@ -155,24 +156,24 @@ function drawAdventure(time){
     const pulse=REDUCED?1:1+Math.sin(p.pulse*Math.PI)*.12,r=p.r*pulse;
     if(level.type==='rhythm'){
       pill(p.x-p.r*1.05,p.y-p.r*1.05,p.r*2.1,p.r*2.1,p.pulse>0?'#FFFFFF':'#ffffffa8',24);
-      artOrToy(['drum','xylophone','bell'][p.kind],p.x,p.y,r*2.05,REDUCED?0:Math.sin(p.pulse*8)*p.pulse*.12);
+      drawLivingArt(['drum','xylophone','bell'][p.kind],p,r*2.05,REDUCED?0:Math.sin(p.pulse*8)*p.pulse*.12);
       for(let i=0;i<=p.id;i++)orb(p.x+(i-p.id/2)*7,p.y+p.r*.9,2.3,PALETTE[p.id]);
     }else if(level.type==='pattern'){
       ctx.strokeStyle='#75B190';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(p.x,p.y+p.r*.7,p.r*.65,7,0,0,7);ctx.stroke();
-      if(p.stage===0){orb(p.x,p.y,p.r*.72,'#ffffff80');artOrToy('flower',p.x,p.y+p.r*.15,p.r*1.05);}
-      else artOrToy('flower',p.x,p.y+p.r*(.28-p.stage*.06),r*(.85+p.stage*.38));
+      if(p.stage===0){orb(p.x,p.y,p.r*.72,'#ffffff80');drawLivingArt('flower',{...p,y:p.y+p.r*.15},p.r*1.05);}
+      else drawLivingArt('flower',{...p,y:p.y+p.r*(.28-p.stage*.06)},r*(.85+p.stage*.38));
     }else if(level.type==='orchard'){
-      if(p.cooldown>0)continue;artOrToy(['apple','orange','pear'][p.kind],p.x,p.y,r*2.05);
+      if(p.cooldown>0)continue;drawLivingArt(['apple','orange','pear'][p.kind],p,r*2.05);
     }else if(level.type==='pop'){
-      if(p.cooldown>0)continue;const bob=REDUCED?0:Math.sin(time*1.3+p.id)*4;artOrToy('bubble',p.x,p.y+bob,r*2.15);toy(['heart','star','flower'][p.kind],p.x,p.y+bob,r*.22,PALETTE[p.id%6]);
+      if(p.cooldown>0)continue;const bob=REDUCED?0:Math.sin(time*1.3+p.id)*4;drawLivingArt('bubble',{...p,y:p.y+bob},r*2.15);
     }else if(level.type==='aquarium'){
-      ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.turn,1);artOrToy(p.id===4?'turtle':'fish',0,0,r*2.2,REDUCED?0:Math.sin(time*2+p.id)*.07);ctx.restore();
-    }else artOrToy('rocket',p.x,p.y,r*2,REDUCED?0:Math.sin(time+p.id)*.07);
+      drawLivingArt(p.id===4?'turtle':'fish',p,r*2.2,REDUCED?0:Math.sin(time*2+p.id)*.07,p.turn);
+    }else drawLivingArt('rocket',p,r*2,REDUCED?0:Math.sin(time+p.id)*.07);
     if(keyboardMode&&document.activeElement===cvs&&g.items[g.focus]===p){ctx.strokeStyle='#477CAA';ctx.lineWidth=3;ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.1,0,7);ctx.stroke();}
   }
   if(level.type==='orchard'){
     const by=b.y+b.h-24;basket(W/2,by,Math.min(40,b.h*.085));
-    for(const f of g.flights){const t=f.life/f.max,tx=f.x+(W/2-f.x)*t,ty=f.y+(by-f.y)*t-(REDUCED?0:Math.sin(t*Math.PI)*42);artOrToy(['apple','orange','pear'][f.kind],REDUCED?W/2:tx,REDUCED?by:ty,42*(1-t*.35));}
+    for(const f of g.flights){const t=f.life/f.max,tx=f.x+(W/2-f.x)*t,ty=f.y+(by-f.y)*t-(REDUCED?0:Math.sin(t*Math.PI)*42);drawLivingArt(['apple','orange','pear'][f.kind],{...f,x:REDUCED?W/2:tx,y:REDUCED?by:ty},42*(1-t*.35));}
   }
   for(const e of g.effects){
     const a=1-e.life/e.max;ctx.save();ctx.globalAlpha=a;
