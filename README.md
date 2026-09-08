@@ -92,3 +92,16 @@ node tests/playground.cjs
 Fizik motoru Matter.js 0.20.0 yerel olarak `vendor/` içinde bulunur; çalışma sırasında CDN isteği yapılmaz. MIT lisansı `vendor/MATTER-LICENSE.txt` içindedir. Yeni scriptler ve SVG kapaklar çevrimdışı önbelleğe dahildir.
 
 Testler ayrıca boya çizgisi, geri alınabilir temizleme, çoklu parmak, sınırlı geçmiş, kayıt ve menüden dönüşü; oyuncakların zeminde kalmasını, devrilmesini, üç düzeni, sürükleme bağlantılarının temizlenmesini ve cisim sınırını doğrular.
+
+## Canlı oyuncaklar · v2.3
+
+`personality.js`, SVG gövdelerinin üzerine durumu korunan vektör yüzler çizer. Altı mizaç: Meraklı, Neşeli, Çekingen, Uykucu, Şakacı ve Sevecen. Her birinin göz oranı, göz kırpma aralığı, hareket enerjisi ve kısa ses tonu farklıdır. Çekingen daha yavaş gülümser ve dokunulunca kızarır; Uykucu daha erken mahmurlaşır; Şakacı kıkırdarken göz kırpar; Sevecen'in tepki vurguları kalptir. Blokların küçük amblemleri kişiliklerini dinlenirken de ayırt eder.
+
+- Parmak takibi oyuncak dönüşü ve balıkların ayna yönü hesaba katılarak yapılır. Çoklu dokunmada tutulan oyuncak kendi parmağına, diğerleri en yakın parmağa bakar.
+- Tutulma, havalanma, çarpışma, toparlanıp gülme, selamlama, seri dokunmada kıkırdama ve dinlenme durumları vardır. Göz, kaş, ağız ve gövde bağımsız, yumuşak geçişlerle güncellenir.
+- Çarpışma sonrası yay hareketi en fazla %9 gövde deformasyonu üretir; fizik geometrisini değiştirmez. Tekrarlanan temaslarda 420 ms tepki aralığı, seslerde genel ve oyuncak başına sınır bulunur.
+- Menü, arka plan ve pointer iptali tutulma durumunu temizler. Yeni zamanlayıcı veya ayrı animasyon döngüsü açılmaz.
+- 12 yeni blok/top SVG gövdesi; eğimler, parlak kenarlar, yüzey çizgileri ve yumuşak ışık katmanları içerir. 11 oyun nesnesinin yüzsüz SVG sürümü animasyon yüzüyle birleşir; sabit ve hareketli gözler üst üste çizilmez. 37 SVG ve karakter scripti çevrimdışı önbelleğe dahildir.
+- Azaltılmış hareket tercihinde gövde sallanması, esneme, yan vurgu parçacıkları ve göz kırpma kaldırılır; dokunma ve yüz ifadeleri çalışmaya devam eder.
+
+Testler 15 modu dört ölçüde çizer; karakter durum önceliği, temas tekrar sınırı, kıkırdama, uyanma, dönen/aynalı bakışlar, pointer iptali ve fizik geometrisinin korunmasını doğrular. `EVIS_REDUCED=1 node tests/playground.cjs` azaltılmış hareketi kontrol eder. `EVIS_RENDER_DIR` ayrıca altı kişiliğin ifade tablosunu ve 90 karelik tutulma–bırakılma–iniş animasyonunu üretir. Bunlar gerçek Canvas ve oyun mantığı testleridir; gerçek telefon tarayıcısındaki dokunma, ses, kare hızı ve PWA kontrolünün yerine geçmez.
