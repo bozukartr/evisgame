@@ -158,3 +158,18 @@ Ana menünün üstünde **2–3 yaş / 4+ yaş** seçici var; seçim cihazda hat
 Ortak altyapı `arcade.js`: seviye akışı, kayıt (`evisgame-arcade-v1`), HUD, parçacıklar, kutlama ve yeniden deneme. Oyunlar `stack.js`, `slice.js`, `hole.js`, `merge.js`, `sort.js` içindedir. Meyve birleştir Matter.js ile sabit 400×520 kavanoz dünyasında sabit zaman adımıyla çalışır; ekran döndürmek durumu bozmaz. Tüm dosyalar çevrimdışı önbellektedir; “Tüm ilerlemeyi sıfırla” bu oyunların seviyelerini de sıfırlar.
 
 Testler 21 modu dört ekran ölçüsünde çizer ve her yeni oyunun kurallarını doğrular: blok kesme/mükemmel/ıska/kazanma, kaydırarak kesme, kalpler ve sınırlı efektler, deliğin üç seviyede de sonuna kadar yenebildiği, meyve birleşmesi/bekleme süresi/iptal/taşma, üretilen sıralama bulmacalarının çözülebilirliği, geri alma ve kazanma, yaş seçici. Gerçek Chromium'da gerçek fare/dokunma girdisiyle her oyun oynandı: konsol hatası yok, 60 fps.
+
+## Altı yeni 4+ oyun · v2.6
+
+4+ menüsünde artık 12 oyun var; telefonda 3, yatay ekranda 6 sütunlu sık ızgara ile her kart dokunulabilir büyüklükte kalır. Yeni oyunlarda “YENİ” etiketi bulunur.
+
+| Oyun | Tür | Nasıl oynanır |
+| --- | --- | --- |
+| Basket at | Sapan atışı (fizik) | Topu geri çek, noktalı yay önizlemesine bak, bırak. Çember iki nokta, pano bir çizgidir; çembere çarpıp dönme ve panodan sekme gerçekçidir. İnen topu potaya hafifçe çeken çocuk dostu yardım vardır. 3 ıska seviyeyi yeniden başlatır |
+| Tuğla kır | Breakout | Bulut raketi parmakla kaydır; şeker tuğlaları kır. İki vuruşluk çatlayan tuğlalar, “+2 top” ve “kocaman raket” güçleri, 3 can |
+| Balon atıcı | Bubble shooter | Nişan al, bırak; duvardan seken nişan çizgisi. 3 veya daha fazla aynı renk patlar, tutunamayan balonlar düşer. Sonraki seviyelerde tavan iner; kesikli çizgiye ulaşırsa yeniden dene |
+| Zıpzıp | Doodle Jump | Kurbağa kendi zıplar, parmakla sağa sola yönlendir. Hareketli, kırılan ve yaylı platformlar, yıldızlar; yükseldikçe gökyüzü gece olur. Platform aralıkları zıplama yüksekliğini hiç aşmaz; bitişe yakın yay yoktur |
+| Yol boya | Amaze (kaydırmalı bulmaca) | Kaydır ya da topun yanına dokun; top duvara kadar kayar ve yolu boyar. Labirentler kayma hamleleriyle oyulur; her seviye mutlaka bitirilebilir |
+| Uçan kuş | Flappy Bird | Dokun, civciv kanat çırpsın. Geniş aralıklar, yavaş hız, ardışık aralıklar arasında büyük sıçrama yok; aralardaki yıldızlar ek puan |
+
+Testler 27 modu dört ekran ölçüsünde çizer ve yeni oyunları doğrular: gerçek çek-bırak girdisiyle basket, ıska/kalp/iptal; tuğla kırma, can kaybı ve kazanma; balon patlatma, düşen balonlar ve çizgi kuralı; Zıpzıp'ın 1, 4 ve 7. seviyelerinin otomatik oyuncuyla sonuna kadar çıkılabildiği; labirentlerin 1, 4 ve 8. seviyede tamamen boyanabildiği; kuşun direklerden geçmesi ve çarpması. Rastgele üretilen seviyeler toplu olarak da denendi (60/60 labirent, 30/30 Zıpzıp, 30/30 Uçan kuş, 60/60 yardımlı basket, önizlemeye göre atılan 63/64 basket). Gerçek Chromium'da gerçek fare girdisiyle her oyun oynandı: konsol hatası yok, 60 fps.

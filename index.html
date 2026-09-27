@@ -447,7 +447,7 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort'];
+const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort','basket','bricks','bubble','jump','amaze','flappy'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 let activeType=null;
@@ -777,7 +777,7 @@ let started=false,appView='start';
 /* ---------------- yazısız animasyonlu oyun menüsü ---------------- */
 // The main menu is split by age: calm touch play for 2–3, quick hypercasual games for 4+.
 const MAIN_MENU=['paint','tumble','pop','rhythm','pattern','orchard','more','learn'];
-const BIG_MENU=['tower','stack','slice','hole','merge','sort'];
+const BIG_MENU=['tower','stack','slice','hole','merge','sort','basket','bricks','bubble','jump','amaze','flappy'];
 const MORE_MENU=['aquarium','fireworks'];
 let menuAge='small';
 try{ if(localStorage.getItem('evisgame-age')==='big') menuAge='big'; }catch(e){}
@@ -1407,6 +1407,12 @@ function frame(now){
 <script src="hole.js"></script>
 <script src="merge.js"></script>
 <script src="sort.js"></script>
+<script src="basket.js"></script>
+<script src="bricks.js"></script>
+<script src="bubble.js"></script>
+<script src="jump.js"></script>
+<script src="amaze.js"></script>
+<script src="flappy.js"></script>
 <script src="ambience.js"></script>
 <script>resize(); requestAnimationFrame(frame);</script>
 </body>

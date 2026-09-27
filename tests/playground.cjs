@@ -13,7 +13,7 @@ const context=vm.createContext(sandbox),run=code=>vm.runInContext(code,context);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 (async()=>{
 run(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js','tower.js','arcade.js','stack.js','slice.js','hole.js','merge.js','sort.js','ambience.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
+for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js','tower.js','arcade.js','stack.js','slice.js','hole.js','merge.js','sort.js','basket.js','bricks.js','bubble.js','jump.js','amaze.js','flappy.js','ambience.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
 assert((await run('touchArtReady')).every(Boolean),'all SVG assets load');
 run('resize(); started=true; adsDisabled=true;');
 const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
@@ -25,7 +25,7 @@ for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
   assert(run('menuCards(MAIN_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=0&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
   assert(run('menuCards(MAIN_MENU).every(c=>c.y>=ageTabs().y+ageTabs().h)'),'cards sit below the age tabs');
   render(`menu-${w}x${h}`);
-  run("setMenuAge('big');for(let t=5;t<8;t+=.05)drawGameMenu(t);");assert.equal(run('menuLayer.children.length'),8,'6 quick games and the 2 age tabs');
+  run("setMenuAge('big');for(let t=5;t<8;t+=.05)drawGameMenu(t);");assert.equal(run('menuLayer.children.length'),14,'12 quick games and the 2 age tabs');
   assert(run('menuCards(BIG_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=ageTabs().y+ageTabs().h&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
   render(`menu-big-${w}x${h}`);run("setMenuAge('small');");
   for(const type of run('TYPES')){
@@ -41,7 +41,7 @@ for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
   }
 }
 sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
-for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble','tower','stack','slice','hole','merge','sort'].includes(t))){
+for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble','tower',...run('Object.keys(ARCADE)')].includes(t))){
   run(`beginMode('${type}');`);
   assert.equal(run('phase'),'play','no intro lock');
   const before=run('level.adventure.total');
@@ -120,7 +120,7 @@ assert(run('towerHolding()'));
 run('let flashed=false;for(let i=0;i<120;i++){updateAdventure(1/60);flashed=flashed||tg.rings[1].flash>0;}');
 assert.equal(run('tg.next'),1,'dark slices never break without fire');assert(run('flashed'),'dark slice reacts');
 assert.equal(run('tg.state'),'play','a dark slice is never a loss');assert.equal(run('phase'),'play');
-run('tg.rings[1].kinds.fill(0);for(let i=0;i<60;i++)updateAdventure(1/60);');
+run('tg.rings.slice(1,6).forEach(r=>r.kinds.fill(0));for(let i=0;i<60;i++)updateAdventure(1/60);');
 assert(run('tg.next>2'),'holding keeps smashing');assert(run('tg.heat>0'),'holding charges the fire meter');
 assert(run('REDUCED?tg.debris.length===0:tg.debris.length>0&&tg.debris.length<=48'),'shards are bounded (none with reduced motion)');
 run('endTouch({pointerId:900});');assert.equal(run('towerHolding()'),false);
@@ -197,7 +197,62 @@ run('tapAdventure(og.items[2].x,og.items[2].y);tapAdventure(og.items[3].x,og.ite
 run('tapAdventure(og.items[1].x,og.items[1].y);tapAdventure(og.items[0].x,og.items[0].y);tapAdventure(og.items[1].x,og.items[1].y);tapAdventure(og.items[3].x,og.items[3].y);');
 assert(run('sortSolved(og.tubes)'));step(60);assert.equal(run('og.state'),'win');
 run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-sort');
-run('openMenu();');for(const t of ['stack','slice','hole','merge','sort'])assert(JSON.parse(saved.get('evisgame-progress-v1')).sensoryTotals[t]>0,`${t} exploration saved`);
+// Basket at: an on-target arc scores, misses cost hearts, three misses retry, cancelled aims never throw.
+run("beginMode('basket');var ba=level.adventure;");step(10);
+run('tapAdventure(0,0);');run('for(let i=0;i<240&&!ba.ball.scored;i++)updateAdventure(1/60);');assert.equal(run('ba.made'),1,'clean arc drops through the hoop');
+step(90);assert.equal(run('ba.ball.live'),false,'ball resets after a basket');
+// A real pull-and-release, chosen the way a child reads the dotted preview, scores through the touch handlers.
+run(`{const b=ba.ball;let best=null,bd=1e9;for(let L=40;L<=170;L+=5)for(let a=-1.4;a<=1.4;a+=.02){const p={x0:b.x,y0:b.y,x:b.x-Math.sin(a)*L,y:b.y+Math.cos(a)*L},v=basketAimVelocity(ba,p);
+  if(!v||b.y-v.y*v.y/(2*ba.grav)>ba.hy-ba.r*3.5)continue;const t=(-v.y+Math.sqrt(v.y*v.y+2*ba.grav*(ba.hy-b.y)))/ba.grav,d=Math.abs(b.x+v.x*t-basketHoopX(ba,ba.phase+t));if(d<bd){bd=d;best=p;}}
+  startTouch({pointerId:62,clientX:best.x0,clientY:best.y0});moveTouch({pointerId:62,clientX:best.x,clientY:best.y,preventDefault(){}});endTouch({pointerId:62,clientX:best.x,clientY:best.y,type:'pointerup'});}`);
+assert.equal(run('ba.ball.live'),true,'release throws');run('for(let i=0;i<240&&!ba.ball.scored;i++)updateAdventure(1/60);');assert.equal(run('ba.made'),2,'short pull reaches the hoop and scores');step(90);
+run('startTouch({pointerId:61,clientX:ba.ball.x,clientY:ba.ball.y});moveTouch({pointerId:61,clientX:ba.ball.x,clientY:ba.ball.y+120,preventDefault(){}});cancelAllPointers();');assert.equal(run('ba.ball.live'),false,'cancelled aim does not throw');
+for(let k=0;k<3;k++){run('basketLaunch(ba,0,-80);');run('for(let i=0;i<300&&ba.ball.live;i++)updateAdventure(1/60);');}
+assert.equal(run('ba.state'),'retry','three misses retry');step(100);assert.equal(run('ba.hearts'),3);
+run('ba.goal=1;');step(5);run('tapAdventure(0,0);for(let i=0;i<240&&ba.state==="play";i++)updateAdventure(1/60);');assert.equal(run('ba.state'),'win');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-basket');
+// Tuğla kır: the ball breaks bricks off the paddle; losing every ball costs a life; clearing wins.
+run("beginMode('bricks');var bk=level.adventure;var bricks0=bk.bricks.length;tapAdventure(W/2,0);");
+run('for(let i=0;i<900;i++){if(bk.balls[0])bk.paddleX=clamp((bk.balls[0].x-bk.box.x)/bk.box.w,.15,.85);updateAdventure(1/60);}');
+assert(run('bk.bricks.length<bricks0'),'bricks break');assert.equal(run('bk.lives'),3,'tracked paddle keeps the ball alive');
+run('bk.balls.forEach(b=>{b.y=bk.box.y+bk.box.h+100;});');step(2);assert.equal(run('bk.lives'),2);assert(run('bk.serve'));
+run('bk.bricks.splice(1);tapAdventure(W/2,0);{const k=bk.bricks[0];Object.assign(bk.balls[0],{x:k.x+k.w/2,y:k.y+k.h+60,vx:0,vy:-bk.speed});}for(let i=0;i<120&&bk.state==="play";i++)updateAdventure(1/60);');
+assert.equal(run('bk.state'),'win','last brick wins');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-bricks');
+// Balon atıcı: three of a colour pop, cut-off bubbles fall, reaching the line retries.
+run("beginMode('bubble');var bb=level.adventure;bb.grid=new Map([['0,3',{color:0,pop:0}],['0,4',{color:0,pop:0}],['1,3',{color:1,pop:0}],['2,3',{color:2,pop:0}],['0,0',{color:3,pop:0}]]);bb.start=5;bb.every=0;bb.cur=0;");
+run('{const p=bubblePos(bb,0,5);tapAdventure(p.x,p.y);}for(let i=0;i<120&&bb.shot;i++)updateAdventure(1/60);');
+assert(run('!bb.grid.has("0,3")&&!bb.grid.has("0,4")'),'three reds pop');assert(run('!bb.grid.has("1,3")&&!bb.grid.has("2,3")&&bb.falling.length>=2'),'orphaned bubbles fall');
+run('bb.cur=3;{const p=bubblePos(bb,0,1);tapAdventure(p.x,p.y+5);}for(let i=0;i<120&&bb.shot;i++)updateAdventure(1/60);');assert.equal(run('bb.grid.size'),2);
+run('for(let r=0;r<22;r++)bb.grid.set(r+",8",{color:4,pop:0});bb.cur=5;{const p=bubblePos(bb,0,6);tapAdventure(p.x,p.y+5);}for(let i=0;i<120&&bb.shot;i++)updateAdventure(1/60);');assert.equal(run('bb.state'),'retry','bubbles past the line retry');
+step(100);run('bb.grid=new Map([["0,4",{color:1,pop:0}],["0,5",{color:1,pop:0}]]);bb.cur=1;{const p=bubblePos(bb,0,3);tapAdventure(p.x,p.y+5);}for(let i=0;i<120&&bb.shot;i++)updateAdventure(1/60);');assert.equal(run('bb.state'),'win','clearing the board wins');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-bubble');
+// Zıpzıp: steering toward the next platform always reaches the finish; falling retries.
+for(const lvl of [1,4,7]){
+  run(`arcadeSaves.jump={lvl:${lvl}};beginMode('jump');var jg=level.adventure;`);
+  // Autoplayer: at each takeoff, steer to the lowest platform that is still on screen below this jump's apex.
+  run('var jT=null,jPrev=0;for(let i=0;i<14000&&jg.state==="play";i++){if(jg.p.vy>0&&jPrev<=0){const y0=jg.p.y,apex=y0+jg.p.vy*jg.p.vy/(2*JUMP.grav),lo=Math.max(y0+.02,apex-.37);jT=jg.plats.filter(q=>q.y>lo&&q.y<apex-.02&&!q.gone).sort((a,b)=>a.y-b.y)[0]||null;}jPrev=jg.p.vy;if(jT)jumpAim(jg,jg.box.x+jT.x*jg.box.w);updateAdventure(1/60);}');
+  assert.equal(run('jg.state'),'win',`jump level ${lvl} is climbable`);
+}
+run("arcadeSaves.jump={lvl:1};beginMode('jump');jg=level.adventure;jg.plats.length=1;jg.plats[0].x=.1;jg.plats[0].w=.1;jumpAim(jg,jg.box.x+jg.box.w*.9);jg.finish=true;");
+run('for(let i=0;i<600&&jg.state==="play";i++)updateAdventure(1/60);');assert.equal(run('jg.state'),'retry','falling retries');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-jump');
+// Yol boya: replaying the carve moves paints every tile at several sizes.
+for(const lvl of [1,4,8]){
+  run(`arcadeSaves.amaze={lvl:${lvl}};beginMode('amaze');var am=level.adventure;`);
+  run('for(const d of am.solution){amazeGo(am,d);for(let i=0;i<120&&am.ball.move;i++)updateAdventure(1/60);}');
+  assert.equal(run('am.done'),run('am.need'),`maze level ${lvl} fully paintable`);assert.equal(run('am.state'),'win');
+}
+run("arcadeSaves.amaze={lvl:1};beginMode('amaze');am=level.adventure;{const b=am.ball;tapAdventure(am.ox+(b.c+.5)*am.cs+am.cs*3,am.oy+(b.r+.5)*am.cs);}");
+assert(run('!!am.ball.move||am.ball.wob>0'),'tap beside the ball slides it (or bumps a wall)');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-amaze');
+// Uçan kuş: flapping through gaps passes pillars; hitting one retries; reaching the goal wins.
+run("beginMode('flappy');var fl=level.adventure;fl.goal=3;tapAdventure(0,0);");
+run('for(let i=0;i<3000&&fl.state==="play";i++){const p=fl.pipes.find(p=>p.x+fl.pw/2>.2);const ty=p?p.y+.03:.45;if(fl.bird.y>ty&&fl.bird.vy>-.05)flappyFlap(fl);updateAdventure(1/60);}');
+assert.equal(run('fl.state'),'win','steady flapping passes the pillars');
+step(150);run('tapAdventure(0,0);for(let i=0;i<600&&fl.state==="play";i++)updateAdventure(1/60);');assert.equal(run('fl.state'),'retry','never flapping hits the ground or a pillar');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-flappy');
+run('openMenu();');for(const t of ['stack','slice','hole','merge','sort','basket','bricks','bubble','jump','amaze','flappy'])assert(JSON.parse(saved.get('evisgame-progress-v1')).sensoryTotals[t]>0,`${t} exploration saved`);
 run("setMenuAge('big');");assert.equal(saved.get('evisgame-age'),'big');assert.equal(run("ageTabHit(ageTabs().x+5,ageTabs().y+5)"),'small');run("handleMenuTap(ageTabs().x+5,ageTabs().y+5);");assert.equal(run('menuAge'),'small','tab tap switches age');
 // Scene transitions capture the old screen and finish without leaving state behind.
 run('openMenu();');assert(run('sceneFx.t===0&&!!sceneFx.snap'),'transition starts from a snapshot');
@@ -251,5 +306,5 @@ if(process.env.EVIS_RENDER_DIR){
  run('resize();');
 }
 
-console.log('PASS: 21 modes × 4 viewports; 4+ arcade: stack cut/perfect/retry/win, slice swipe/hearts, hole always completable, merge physics/cooldown/overflow, sort solver/undo/win; age tabs; tower smash/bounce/fire/goal/level save/layout; scene transitions; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
+console.log('PASS: 27 modes × 4 viewports; basket arc/miss/cancel, bricks lives/win, bubble pop/drop/line, jump climbable/fall, maze paintable, flappy pass/crash; 4+ arcade: stack cut/perfect/retry/win, slice swipe/hearts, hole always completable, merge physics/cooldown/overflow, sort solver/undo/win; age tabs; tower smash/bounce/fire/goal/level save/layout; scene transitions; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

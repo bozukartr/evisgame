@@ -146,3 +146,8 @@ function arcadeUp(e){
 function cancelArcadeTouches(){const g=level&&level.adventure;if(g&&g.arcade&&g.arcade.cancel)g.arcade.cancel(g);}
 function arcadeTap(x,y){const g=level.adventure;g.idle=0;if(g.state==='play'&&g.arcade.tap)g.arcade.tap(g,x,y);}
 function drawArcadePreview(kind,x,y,s,t){ARCADE[kind].preview(x,y,s,REDUCED?0:t);}
+// Hearts row under the first level badge, shared by games that allow a few misses.
+function drawArcadeHearts(n,max=3){
+  const x0=W/2-Math.min(W*.34,170)-4,y=safe.top+76;
+  for(let i=0;i<max;i++){ctx.save();ctx.globalAlpha=i<n?1:.35;ctx.translate(x0+i*24,y);shapePath(ctx,'heart',8);ctx.fillStyle=i<n?'#FF4F6D':'#FFFFFF';ctx.fill();ctx.restore();}
+}
