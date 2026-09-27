@@ -1,5 +1,5 @@
 /* Touch-first play: every gesture produces feedback; there is no correct answer. */
-const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks','paint','tumble','tower'];
+const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort'];
 const sensoryTotals={};
 for(const kind of FREE_PLAY){const n=Number(savedProgress.sensoryTotals?.[kind]);sensoryTotals[kind]=Number.isSafeInteger(n)&&n>0?n:0;}
 const touchPointers=new Map();
@@ -9,6 +9,7 @@ function artOrToy(name,x,y,size,rotation=0){
 }
 function drawSensoryPreview(kind,x,y,s,t){
   if(kind==='tower'){drawTowerPreview(x,y,s,t);return;}
+  if(ARCADE[kind]){drawArcadePreview(kind,x,y,s,t);return;}
   if(kind==='paint'||kind==='tumble'){artOrToy(kind==='paint'?'palette':'blocks',x,y,s*.88);return;}
   if(kind==='more'){artOrToy('fish',x-s*.17,y,s*.55);artOrToy('rocket',x+s*.19,y,s*.55);return;}
   const tilt=REDUCED?0:Math.sin(t*1.6)*.08;
@@ -18,6 +19,7 @@ function drawSensoryPreview(kind,x,y,s,t){
 }
 function buildAdventure(type,round){
   if(type==='tower'){buildTower();return;}
+  if(ARCADE[type]){buildArcade(type);return;}
   if(type==='paint'||type==='tumble'){buildStudio(type);return;}
   const count={pop:8,rhythm:6,pattern:6,orchard:9,aquarium:5,fireworks:3}[type];
   const g={free:true,round,total:sensoryTotals[type]||0,focus:0,effects:[],flights:[],reward:0,soundAt:-1,soundCount:0,items:Array.from({length:count},(_,i)=>({kind:i%3,id:i,actor:character(i),pulse:0,stage:0,cooldown:0,dx:0,dy:0,travel:0,turn:1}))};
@@ -26,6 +28,7 @@ function buildAdventure(type,round){
 }
 function layoutAdventure(){
   if(level.adventure.tower){layoutTower();return;}
+  if(level.adventure.arcade){layoutArcade();return;}
   if(level.adventure.studio){layoutStudio();return;}
   const g=level.adventure,uh=H-safe.top-safe.bottom,wide=W>H*1.25;
   const w=Math.min(W-safe.left-safe.right-24,800),x=(W-w)/2,top=safe.top+Math.max(92,uh*.23),bottom=H-safe.bottom-78;
@@ -79,6 +82,7 @@ function touchAllowed(){return appView==='game'&&!!level?.adventure&&phase==='pl
 function startTouch(e){
   if(!touchAllowed())return;
   if(level.adventure.tower){towerPress(e);return;}
+  if(level.adventure.arcade){arcadeDown(e);return;}
   if(level.adventure.studio){startStudioTouch(e);return;}
   touchPointers.set(e.pointerId,{x:e.clientX,y:e.clientY,at:time,item:-1});
   tapAdventure(e.clientX,e.clientY);try{cvs.setPointerCapture(e.pointerId);}catch(err){}
@@ -87,6 +91,7 @@ function moveTouch(e){
   const d=touchPointers.get(e.pointerId);if(!d)return false;
   if(!touchAllowed()){endTouch(e);return true;}
   if(level.adventure.tower){e.preventDefault&&e.preventDefault();d.x=e.clientX;d.y=e.clientY;return true;}
+  if(level.adventure.arcade){arcadeMove(e,d);return true;}
   if(level.adventure.studio){moveStudioTouch(e);return true;}
   e.preventDefault();
   if(Math.hypot(e.clientX-d.x,e.clientY-d.y)<12||time-d.at<.075)return true;
@@ -94,6 +99,7 @@ function moveTouch(e){
 }
 function endTouch(e){if(!touchPointers.has(e.pointerId))return;
   if(level?.adventure?.studio)endStudioTouch(e);
+  if(level?.adventure?.arcade)arcadeUp(e);
 touchPointers.delete(e.pointerId);try{if(cvs.hasPointerCapture(e.pointerId))cvs.releasePointerCapture(e.pointerId);}catch(err){}}
 function effect(g,e){g.effects.push(e);if(g.effects.length>96)g.effects.splice(0,g.effects.length-96);}
 function sparkle(g,x,y,color,n=8,kind='spark'){
@@ -109,6 +115,7 @@ function playTouchSound(type,p,fallback){
 function tapAdventure(x,y,drag=false){
   if(!touchAllowed())return;
   if(level.adventure.tower){towerTap();return;}
+  if(level.adventure.arcade){arcadeTap(x,y);return;}
   if(level.adventure.studio){tapStudio(x,y);return;}
   const g=level.adventure,b=g.box;
   x=clamp(x,b.x+8,b.x+b.w-8);y=clamp(y,b.y+8,b.y+b.h-8);
@@ -156,6 +163,7 @@ function tapAdventure(x,y,drag=false){
 }
 function updateAdventure(dt){
   if(level.adventure.tower){updateTower(dt);return;}
+  if(level.adventure.arcade){updateArcade(dt);return;}
   if(level.adventure.studio){updateStudio(dt);return;}
   updateCharactersClock(dt);const g=level.adventure,b=g.box;g.reward=Math.max(0,g.reward-dt);
   for(const p of g.items){p.pulse=Math.max(0,p.pulse-dt*3);p.cooldown=Math.max(0,p.cooldown-dt);
@@ -178,6 +186,7 @@ function updateAdventure(dt){
 }
 function drawAdventure(time){
   if(level.adventure.tower){drawTower(time);return;}
+  if(level.adventure.arcade){drawArcade(time);return;}
   if(level.adventure.studio){drawStudio(time);return;}
   const g=level.adventure,b=g.box;
   ctx.drawImage(g.scene,b.x,b.y,b.w,b.h);
