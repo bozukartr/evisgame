@@ -1,5 +1,5 @@
 /* Touch-first play: every gesture produces feedback; there is no correct answer. */
-const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort'];
+const FREE_PLAY=['pop','rhythm','pattern','orchard','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort','basket','bricks','bubble','jump','amaze','flappy'];
 const sensoryTotals={};
 for(const kind of FREE_PLAY){const n=Number(savedProgress.sensoryTotals?.[kind]);sensoryTotals[kind]=Number.isSafeInteger(n)&&n>0?n:0;}
 const touchPointers=new Map();

@@ -2,8 +2,8 @@
 const WORLD_NAMES=['Bahçe','Deniz','Uzay'];
 let world=0;
 try { world=clamp(Number(localStorage.getItem('evisgame-world'))||0,0,2)|0; } catch(e) {}
-const GAME_LABELS={tower:'Kule topu',stack:'Blok kulesi',slice:'Meyve ninja',hole:'Obur delik',merge:'Meyve birleştir',sort:'Renk sırala',paint:'Boya dünyası',tumble:'Oyuncakları devir',more:'Diğer oyunlar',match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Neşeli müzik',pattern:'Sihirli bahçe',aquarium:'Akvaryum',fireworks:'Işık şöleni',learn:'Birlikte öğrenelim',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
-const CARD_COLORS={tower:'#9FDCE6',stack:'#BFD5FF',slice:'#FFC9C2',hole:'#CDEFBE',merge:'#FFE0B8',sort:'#DCD2FF',paint:'#F8C9DB',tumble:'#F6D491',more:'#B7E0E9',match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#C3E6B0',aquarium:'#93DAD9',fireworks:'#CCBEED',learn:'#F4DDB2',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
+const GAME_LABELS={basket:'Basket at',bricks:'Tuğla kır',bubble:'Balon atıcı',jump:'Zıpzıp',amaze:'Yol boya',flappy:'Uçan kuş',tower:'Kule topu',stack:'Blok kulesi',slice:'Meyve ninja',hole:'Obur delik',merge:'Meyve birleştir',sort:'Renk sırala',paint:'Boya dünyası',tumble:'Oyuncakları devir',more:'Diğer oyunlar',match:'Eşleştir',memory:'Hafıza',pop:'Balonlar',numberdraw:'Sayı çiz',orchard:'Meyve bahçesi',rhythm:'Neşeli müzik',pattern:'Sihirli bahçe',aquarium:'Akvaryum',fireworks:'Işık şöleni',learn:'Birlikte öğrenelim',color:'Renkler',shape:'Şekiller',size:'Boyutlar',count:'Sayalım',animal:'Hayvanlar'};
+const CARD_COLORS={basket:'#FFD3B0',bricks:'#FFC7D6',bubble:'#C4E0FF',jump:'#C9F0D6',amaze:'#E4D9FF',flappy:'#BDE9FF',tower:'#9FDCE6',stack:'#BFD5FF',slice:'#FFC9C2',hole:'#CDEFBE',merge:'#FFE0B8',sort:'#DCD2FF',paint:'#F8C9DB',tumble:'#F6D491',more:'#B7E0E9',match:'#FFD77A',memory:'#C8B5FF',pop:'#91D9FF',numberdraw:'#8BE1BD',orchard:'#FFB591',rhythm:'#FFB2D1',pattern:'#C3E6B0',aquarium:'#93DAD9',fireworks:'#CCBEED',learn:'#F4DDB2',color:'#FFBFA1',shape:'#B9D9FF',size:'#B6E4C3',count:'#FFE395',animal:'#EDC4ED'};
 function pill(x,y,w,h,color,r=20){ctx.beginPath();roundRectPath(ctx,x,y,w,h,Math.min(r,h/2));ctx.fillStyle=color;ctx.fill();}
 function label(text,x,y,size=16,color=INK){ctx.fillStyle=color;ctx.font=`800 ${size}px ui-rounded,system-ui,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,x,y);}
 function orb(x,y,r,color){ctx.beginPath();ctx.arc(x,y,Math.max(.1,r),0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
@@ -78,13 +78,15 @@ function waveTitle(text,x,y,size,time){
     cx+=widths[i];});
   ctx.restore();
 }
+const NEW_GAMES=['basket','bricks','bubble','jump','amaze','flappy'];
 let menuShownAt=0,menuSeenAt=-9,menuSeenView='';
 function menuCards(kinds){
-  const uh=H-safe.top-safe.bottom,wide=W>H*1.25,cols=wide?4:2,rows=Math.ceil(kinds.length/cols);
-  const gap=wide?12:12,areaW=Math.min(W-safe.left-safe.right-32,wide?850:460),w=(areaW-gap*(cols-1))/cols;
+  // Twelve quick games use a denser grid so every card stays tappable on small phones.
+  const uh=H-safe.top-safe.bottom,wide=W>H*1.25,dense=kinds.length>8,cols=wide?(dense?6:4):(dense?3:2),rows=Math.ceil(kinds.length/cols);
+  const gap=dense?10:12,areaW=Math.min(W-safe.left-safe.right-(dense?24:32),wide?(dense?980:850):(dense?520:460)),w=(areaW-gap*(cols-1))/cols;
   const top=appView==='menu'?ageTabs().y+ageTabs().h+14:safe.top+Math.max(92,uh*.22),bottom=safe.top+uh-80;
   const h=Math.min(w*.87,(bottom-top-gap*(rows-1))/rows);
-  return kinds.map((kind,i)=>({kind,x:(W-areaW)/2+(i%cols)*(w+gap),y:top+Math.floor(i/cols)*(h+gap),w:!wide&&i===kinds.length-1&&kinds.length%2?areaW:w,h}));
+  return kinds.map((kind,i)=>({kind,x:(W-areaW)/2+(i%cols)*(w+gap),y:top+Math.floor(i/cols)*(h+gap),w:!wide&&cols===2&&i===kinds.length-1&&kinds.length%2?areaW:w,h}));
 };
 function drawMenuCard(card,time,index=0){
   const {x,y,w,h,kind}=card,s=Math.min(w,h),cx=x+w*.5,cy=y+h*.42;
@@ -107,8 +109,9 @@ function drawMenuCard(card,time,index=0){
   if(sweep>=0&&sweep<=1){ctx.save();ctx.beginPath();roundRectPath(ctx,x,y,w,h,22);ctx.clip();const sx=x-w*.4+sweep*w*1.8,lg=ctx.createLinearGradient(sx-w*.25,y,sx+w*.25,y+h);
     lg.addColorStop(0,'#FFFFFF00');lg.addColorStop(.5,'#FFFFFF55');lg.addColorStop(1,'#FFFFFF00');ctx.fillStyle=lg;ctx.fillRect(x,y,w,h);ctx.restore();}
   label(GAME_LABELS[kind],cx,y+h*.87,Math.min(15,h*.135));
-  if(ARCADE[kind]){ctx.save();ctx.translate(x+12,y+13);ctx.rotate(-.12+(REDUCED?0:Math.sin(time*3+index)*.05));pill(-4,-10,48,20,'#FF5C8A',10);label('YENİ',20,.5,10,'#FFFFFF');ctx.restore();}
-  if(kind==='tower'||ARCADE[kind]){const lv=kind==='tower'?loadTowerLevel():arcadeLevel(kind),tx=`Sv ${lv}`;pill(x+w-50,y+6,44,20,'#FFFFFFE0',10);label(tx,x+w-28,y+16.5,11,'#5B4FC7');}
+  const compact=w<140;
+  if(NEW_GAMES.includes(kind)){ctx.save();ctx.translate(x+(compact?8:12),y+(compact?11:13));ctx.rotate(-.12+(REDUCED?0:Math.sin(time*3+index)*.05));pill(-4,-9,compact?38:48,compact?17:20,'#FF5C8A',9);label('YENİ',compact?15:20,.5,compact?9:10,'#FFFFFF');ctx.restore();}
+  if(kind==='tower'||ARCADE[kind]){const lv=kind==='tower'?loadTowerLevel():arcadeLevel(kind),bw=compact?34:44;pill(x+w-bw-(compact?4:6),y+(compact?4:6),bw,compact?17:20,'#FFFFFFE0',9);label(`Sv ${lv}`,x+w-bw/2-(compact?4:6),y+(compact?12.5:16.5),compact?9.5:11,'#5B4FC7');}
   else{const completed=modeRounds[kind]||0;if(completed){orb(x+w-14,y+14,8,'#FFFFFF');label('✓',x+w-14,y+14,11,'#359D77');}}
   ctx.restore();
 };
