@@ -232,6 +232,7 @@ function readSafeArea(){
 }
 
 function resize(){
+  if(typeof buildBackground!=='function') return; // viewport events can fire before the scene scripts load
   readSafeArea();
   DPR=Math.min(window.devicePixelRatio||1,2);
   W=window.innerWidth; H=window.innerHeight;
@@ -354,7 +355,7 @@ function burst(x,y,color,n){
 function confetti(n){
   for(let i=0;i<n;i++)
     parts.push({x:rnd(0,W),y:rnd(-H*.3,-10),vx:rnd(-50,50),vy:rnd(60,220),g:190,
-      r:rnd(4,10),c:pick(PALETTE),life:0,max:rnd(1.6,2.6),rot:rnd(0,7),vr:rnd(-6,6),sq:true});
+      r:rnd(4,10),c:pick(PALETTE),life:0,max:rnd(1.6,2.6),rot:rnd(0,7),vr:rnd(-6,6),sq:true,star:Math.random()<.22});
 }
 function updateParts(dt){
   for(let i=parts.length-1;i>=0;i--){
@@ -367,10 +368,15 @@ function drawParts(){
   for(const p of parts){
     const t=p.life/p.max, a=1-t*t, sc=1-t*0.45;
     ctx.save(); ctx.globalAlpha=a; ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.fillStyle=p.c;
-    ctx.beginPath();
-    if(p.sq) roundRectPath(ctx,-p.r*sc,-p.r*sc*.6,p.r*2*sc,p.r*1.2*sc,p.r*.35);
-    else ctx.arc(0,0,p.r*sc,0,Math.PI*2);
-    ctx.fill(); ctx.restore();
+    // Paper confetti tumbles in 3D: its visible height follows the spin.
+    if(p.sq&&!REDUCED) ctx.scale(1,.25+.75*Math.abs(Math.cos(p.rot*1.7+p.r)));
+    if(p.star){ starPath(ctx,p.r*sc*1.2); }
+    else { ctx.beginPath();
+      if(p.sq) roundRectPath(ctx,-p.r*sc,-p.r*sc*.6,p.r*2*sc,p.r*1.2*sc,p.r*.35);
+      else ctx.arc(0,0,p.r*sc,0,Math.PI*2); }
+    ctx.fill();
+    if(!p.sq&&!p.star&&p.r>5){ ctx.beginPath(); ctx.arc(-p.r*sc*.3,-p.r*sc*.3,p.r*sc*.3,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,.45)'; ctx.fill(); }
+    ctx.restore();
   }
 }
 
@@ -441,7 +447,7 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble'];
+const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble','tower'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 let activeType=null;
@@ -642,8 +648,18 @@ function drawMemoryCard(p,time){
   ctx.scale(flipScale*born*(1+bounce),born*(1+bounce));
   ctx.shadowColor='rgba(52,71,61,0.16)'; ctx.shadowBlur=14; ctx.shadowOffsetY=7;
   ctx.beginPath(); roundRectPath(ctx,-p.w/2,-p.h/2,p.w,p.h,p.w*0.18);
-  ctx.fillStyle=front?CREAM:'#86BFA8'; ctx.fill();
+  if(front) ctx.fillStyle=CREAM;
+  else { const bg=ctx.createLinearGradient(0,-p.h/2,0,p.h/2); bg.addColorStop(0,'#9BD0B9'); bg.addColorStop(1,'#6FAF97'); ctx.fillStyle=bg; }
+  ctx.fill();
   ctx.shadowColor='transparent'; ctx.lineWidth=Math.max(2,p.w*0.035); ctx.strokeStyle='rgba(67,83,75,0.20)'; ctx.stroke();
+  // Light falls across the card while it turns, so the flip reads as a real 3D rotation.
+  const turn=Math.sin(p.flip*Math.PI);
+  if(turn>0.02){ ctx.save(); ctx.globalAlpha=turn*0.35; ctx.fillStyle=p.flip<0.5?'#1F3A30':'#FFFFFF';
+    ctx.beginPath(); roundRectPath(ctx,-p.w/2,-p.h/2,p.w,p.h,p.w*0.18); ctx.fill(); ctx.restore(); }
+  if(!front){ ctx.save(); ctx.setLineDash([p.w*0.06,p.w*0.05]); ctx.lineWidth=Math.max(1.5,p.w*0.025); ctx.strokeStyle='rgba(255,255,255,0.55)';
+    ctx.beginPath(); roundRectPath(ctx,-p.w*0.39,-p.h*0.4,p.w*0.78,p.h*0.8,p.w*0.12); ctx.stroke(); ctx.setLineDash([]);
+    for(const [dx,dy] of [[-.26,-.3],[.26,-.3],[-.26,.3],[.26,.3]]){ ctx.beginPath(); ctx.arc(dx*p.w,dy*p.h,p.w*0.025,0,Math.PI*2); ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.fill(); }
+    ctx.restore(); }
   if(front){
     const s=Math.min(p.w,p.h)*0.30;
     ctx.save(); shapePath(ctx,p.shape,s); ctx.fillStyle=p.color; ctx.fill();
@@ -759,8 +775,8 @@ function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.1
 /* ---------------- açılış ---------------- */
 let started=false,appView='start';
 /* ---------------- yazısız animasyonlu oyun menüsü ---------------- */
-const MAIN_MENU=['paint','tumble','pop','rhythm','pattern','orchard','more','learn'];
-const MORE_MENU=['aquarium','fireworks'];
+const MAIN_MENU=['tower','paint','tumble','pop','rhythm','pattern','more','learn'];
+const MORE_MENU=['orchard','aquarium','fireworks'];
 const LEARN_MENU=['match','memory','numberdraw'];
 const menuKinds=()=>appView==='matchMenu'?MATCH_MENU:appView==='learnMenu'?LEARN_MENU:appView==='moreMenu'?MORE_MENU:MAIN_MENU;
 const MATCH_MENU=['color','shape','size','count','animal'];
@@ -1212,7 +1228,7 @@ restartLevelButton.addEventListener('click',()=>{
 });
 resetProgressButton.addEventListener('click',()=>{
   cancelAllPointers(); parts.length=0; levelIndex=0; stars=0; modeRounds={}; Object.keys(sensoryTotals).forEach(k=>delete sensoryTotals[k]);
-  try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('evisgame-tower-v1'); }catch(e){}
   buildLevel(0); resetSheet.hidden=true; showToast('İlerleme sıfırlandı');
 });
 window.addEventListener('online',()=>showToast('Bağlantı yeniden kuruldu'));
@@ -1282,7 +1298,9 @@ function frame(now){
 
   if(level.adventure){
     updateAdventure(dt); updateMascot(dt);
-    ctx.drawImage(bgCanvas,0,0,W,H); drawTopBar(time); drawMascot(time); drawAdventure(time); drawParts();
+    if(level.adventure.tower) drawTower(time);
+    else { drawBackdrop(time); drawTopBar(time); drawMascot(time); drawAdventure(time); }
+    drawParts();
     requestAnimationFrame(frame); return;
   }
 
@@ -1294,7 +1312,7 @@ function frame(now){
     if(!selected&&phase==='play') mascotLook(W*0.5,H*0.56);
     updateMascot(dt);
 
-    ctx.drawImage(bgCanvas,0,0,W,H);
+    drawBackdrop(time);
     drawTopBar(time); drawMascot(time);
     if(level.type==='memory') level.pieces.forEach(p=>drawMemoryCard(p,time));
     else if(level.type==='pop'){ drawPopTarget(time); level.pieces.forEach(p=>drawPopBubble(p,time)); }
@@ -1352,7 +1370,7 @@ function frame(now){
   updateMascot(dt);
 
   /* --- çizim --- */
-  ctx.drawImage(bgCanvas,0,0,W,H);
+  drawBackdrop(time);
   drawTopBar(time);
   drawMascot(time);
   level.targets.forEach(t=>{ if(!t.filled) drawSlot(t,time); });
@@ -1375,6 +1393,8 @@ function frame(now){
 <script src="vendor/matter-0.20.0.min.js"></script>
 <script src="studios.js"></script>
 <script src="personality.js"></script>
+<script src="tower.js"></script>
+<script src="ambience.js"></script>
 <script>resize(); requestAnimationFrame(frame);</script>
 </body>
 </html>

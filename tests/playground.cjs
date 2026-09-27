@@ -13,14 +13,14 @@ const context=vm.createContext(sandbox),run=code=>vm.runInContext(code,context);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 (async()=>{
 run(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
+for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js','tower.js','ambience.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
 assert((await run('touchArtReady')).every(Boolean),'all SVG assets load');
 run('resize(); started=true; adsDisabled=true;');
 const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 for(const asset of run('TOUCH_ART_NAMES'))assert(sw.includes('./assets/play/'+asset+'.svg'),'SVG is cached for offline play');
 const render=name=>{if(process.env.EVIS_RENDER_DIR){fs.mkdirSync(process.env.EVIS_RENDER_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.EVIS_RENDER_DIR,name+'.png'),els.get('c').toBuffer('image/png'));}};
 for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
-  sandbox.innerWidth=w;sandbox.innerHeight=h;run("resize(); openMenu(); drawGameMenu(0);");
+  sandbox.innerWidth=w;sandbox.innerHeight=h;run("resize(); openMenu(); drawGameMenu(0); drawGameMenu(3);");
   assert.equal(run('menuLayer.children.length'),8);
   assert(run('menuCards(MAIN_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=0&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
   render(`menu-${w}x${h}`);
@@ -37,7 +37,7 @@ for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
   }
 }
 sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
-for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble'].includes(t))){
+for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble','tower'].includes(t))){
   run(`beginMode('${type}');`);
   assert.equal(run('phase'),'play','no intro lock');
   const before=run('level.adventure.total');
@@ -101,6 +101,48 @@ for(let design=0;design<3;design++){
  assert(run('level.adventure.toys.every(p=>Number.isFinite(p.position.x+p.position.y))'));
 }
 run('openMenu();');assert.equal(run('studioControls.hidden'),true,'studio controls leave with game');
+// Tower: taps and holds smash soft rings, dark slices only bounce, the goal advances a saved level.
+saved.delete('evisgame-tower-v1');
+run("beginMode('tower');");
+assert.equal(run('level.adventure.lvl'),1);assert.equal(run('phase'),'play');
+run('const tg=level.adventure;for(let i=0;i<90;i++)updateAdventure(1/60);');
+assert.equal(run('tg.next'),0,'the ball bounces on the top ring without input');
+assert(run('tg.vy<0||tg.foot<0'),'first ring bounce sends the ball upward');
+run('tg.rings[0].kinds.fill(0);tg.rings[1].kinds.fill(0);tapAdventure(0,0);for(let i=0;i<120;i++)updateAdventure(1/60);');
+assert.equal(run('tg.next'),1,'a tap smashes exactly one ring');assert(run('tg.rings[0].broken&&tg.score===1'));
+assert.equal(run('tg.total'),run('sensoryTotals.tower'));
+run('tg.rings[1].kinds.fill(1);startTouch({pointerId:900,clientX:195,clientY:600});');
+assert(run('towerHolding()'));
+run('let flashed=false;for(let i=0;i<120;i++){updateAdventure(1/60);flashed=flashed||tg.rings[1].flash>0;}');
+assert.equal(run('tg.next'),1,'dark slices never break without fire');assert(run('flashed'),'dark slice reacts');
+assert.equal(run('tg.state'),'play','a dark slice is never a loss');assert.equal(run('phase'),'play');
+run('tg.rings[1].kinds.fill(0);for(let i=0;i<60;i++)updateAdventure(1/60);');
+assert(run('tg.next>2'),'holding keeps smashing');assert(run('tg.heat>0'),'holding charges the fire meter');
+assert(run('REDUCED?tg.debris.length===0:tg.debris.length>0&&tg.debris.length<=48'),'shards are bounded (none with reduced motion)');
+run('endTouch({pointerId:900});');assert.equal(run('towerHolding()'),false);
+run("tg.rings.forEach(r=>r.kinds.fill(1));tg.fire=3;tg.heat=1;startTouch({pointerId:901,clientX:195,clientY:600});for(let i=0;i<40;i++)updateAdventure(1/60);");
+assert(run('tg.rings.slice(0,tg.next).every(r=>r.broken)&&tg.next>4'),'fire mode smashes dark slices too');
+run('cancelAllPointers();');assert.equal(run('towerHolding()'),false,'cancellation releases the hold');
+run('tg.rings.forEach(r=>r.kinds.fill(0));startTouch({pointerId:902,clientX:195,clientY:600});for(let i=0;i<400&&tg.state==="play";i++)updateAdventure(1/60);cancelAllPointers();');
+assert.equal(run('tg.state'),'win','reaching the goal celebrates');assert.equal(JSON.parse(saved.get('evisgame-tower-v1')).lvl,2);
+run('for(let i=0;i<180;i++)updateAdventure(1/60);');
+assert.equal(run('tg.lvl'),2);assert.equal(run('tg.state'),'play');assert.equal(run('tg.next'),0,'next tower is built');
+assert(run('tg.rings.length===18&&tg.rings.every(r=>r.kinds.length===8&&!r.broken)'),'level 2 uses taller octagonal tower');
+assert(run('tg.rings.every(r=>Array.from(r.kinds).some(k=>k===0))'),'every ring keeps a soft slice');
+run('ctx.save();drawAdventure(1);ctx.restore();');render('tower-level-2');
+run('tg.rings[0].kinds.fill(0);resetSheet.hidden=false;const blocked=tg.credit;tapAdventure(0,0);');assert.equal(run('tg.credit'),run('blocked'),'modal blocks tower input');run('resetSheet.hidden=true;');
+for(const [w,h] of [[320,568],[844,390],[768,1024]]){
+ sandbox.innerWidth=w;sandbox.innerHeight=h;run('resize();for(let i=0;i<30;i++)updateAdventure(1/60);drawAdventure(2);');
+ assert(run('tg.origin-tg.R*(TW.bounce+TW.ball)>tg.hud-20&&tg.R>=56'),'ball apex clears the HUD');render(`tower-${w}x${h}`);
+}
+sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
+run('openMenu();');assert.equal(JSON.parse(saved.get('evisgame-progress-v1')).sensoryTotals.tower,run('sensoryTotals.tower'));
+run("beginMode('tower');");assert.equal(run('level.adventure.lvl'),2,'tower level persists');
+// Scene transitions capture the old screen and finish without leaving state behind.
+run('openMenu();');assert(run('sceneFx.t===0&&!!sceneFx.snap'),'transition starts from a snapshot');
+run('for(let i=0;i<60;i++)frame(last+16);');assert.equal(run('sceneFx.t'),1,'transition completes');
+for(const w of [0,1,2]){run(`world=${w};buildBackground();drawBackdrop(${w*3+1});`);render('backdrop-'+w);}
+run('world=0;buildBackground();openMenu();');
 for(const type of ['color','shape','size','count','animal']){
   run(`beginMode('${type}');phase='play';level.pieces.forEach(autoPlace);`);assert.equal(run('phase'),'win',type);
 }
@@ -148,5 +190,5 @@ if(process.env.EVIS_RENDER_DIR){
  run('resize();');
 }
 
-console.log('PASS: 15 modes × 4 viewports; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
+console.log('PASS: 16 modes × 4 viewports; tower smash/bounce/fire/goal/level save/layout; scene transitions; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
