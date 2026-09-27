@@ -138,3 +138,23 @@ Dönen sarmal bir kulede zıplayan topu aşağı indiren yeni oyun, ana menünü
 Ayrıca sayfa açılırken erken gelen görüntü alanı olayında oluşan `buildBackground is not defined` hatası giderildi.
 
 Testler 16 modu dört ekran ölçüsünde çizer; kuleyi dokunma/basılı tutma ile kırmayı, koyu dilimde yalnızca zıplamayı, ateş modunu, hedefe ulaşmayı, seviye kaydını, ekran ölçüsü değişimini, modal kilidini ve sahne geçişini doğrular. Gerçek Chromium'da konsol hatasız çalıştığı ve kule kırılırken 60 fps verdiği kontrol edildi. Gerçek telefonda dokunma, ses ve titreşim kontrolünün yerine geçmez.
+
+## Yaşa göre menü ve 4+ hızlı oyunlar · v2.5
+
+Ana menünün üstünde **2–3 yaş / 4+ yaş** seçici var; seçim cihazda hatırlanır.
+
+- **2–3 yaş:** mevcut sakin dokun-keşfet oyunları (Boya dünyası, Oyuncakları devir, Balonlar, Neşeli müzik, Sihirli bahçe, Meyve bahçesi, Diğer oyunlar, Birlikte öğrenelim). Hiçbiri kaldırılmadı.
+- **4+ yaş:** altı hypercasual oyun. Her birinin seviyesi, puanı, ilerleme çubuğu ve kartında “Sv” rozeti vardır. Kaybetmek hiçbir zaman çıkmaz sokak değildir: “Tekrar!” der ve aynı seviye bir an sonra yeniden kurulur.
+
+| Oyun | Tür | Nasıl oynanır |
+| --- | --- | --- |
+| Kule topu | Stack Ball | Dokun / basılı tut, katları kır |
+| Blok kulesi | Stack (zamanlama) | Kayan blok tam üstteyken dokun; taşan parça kesilip düşer, tam isabette “Mükemmel!” ve blok büyür |
+| Meyve ninja | Fruit Ninja (kaydırma) | Parmağını meyvelerin üstünden kaydır; dikenli toplar kalp götürür, 3 kalp bitince seviye yeniden başlar; tek hamlede 3+ meyve kombo |
+| Obur delik | Hole.io (sürükleme) | Deliği gezdir; kendinden küçük her şeyi yutar ve büyür. Park, plaj ve oyuncak odası temaları. Büyüme alan tabanlıdır, her seviye mutlaka bitirilebilir |
+| Meyve birleştir | Suika (fizik) | Sürükle-bırak; aynı iki meyve birleşip bir büyüğüne dönüşür. Hedef meyveye ulaş; kavanoz taşarsa seviye yeniden başlar |
+| Renk sırala | Ball sort (bulmaca) | Tüpe dokun, topu aynı renge taşı. Her bulmaca çözücüyle doğrulanır; geri al düğmesi ve takılınca ipucu var |
+
+Ortak altyapı `arcade.js`: seviye akışı, kayıt (`evisgame-arcade-v1`), HUD, parçacıklar, kutlama ve yeniden deneme. Oyunlar `stack.js`, `slice.js`, `hole.js`, `merge.js`, `sort.js` içindedir. Meyve birleştir Matter.js ile sabit 400×520 kavanoz dünyasında sabit zaman adımıyla çalışır; ekran döndürmek durumu bozmaz. Tüm dosyalar çevrimdışı önbellektedir; “Tüm ilerlemeyi sıfırla” bu oyunların seviyelerini de sıfırlar.
+
+Testler 21 modu dört ekran ölçüsünde çizer ve her yeni oyunun kurallarını doğrular: blok kesme/mükemmel/ıska/kazanma, kaydırarak kesme, kalpler ve sınırlı efektler, deliğin üç seviyede de sonuna kadar yenebildiği, meyve birleşmesi/bekleme süresi/iptal/taşma, üretilen sıralama bulmacalarının çözülebilirliği, geri alma ve kazanma, yaş seçici. Gerçek Chromium'da gerçek fare/dokunma girdisiyle her oyun oynandı: konsol hatası yok, 60 fps.

@@ -447,7 +447,7 @@ function drawMascot(time){
 }
 
 /* ---------------- seviye ---------------- */
-const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble','tower'];
+const TYPES=['color','memory','shape','pop','size','numberdraw','count','animal','orchard','rhythm','pattern','aquarium','fireworks','paint','tumble','tower','stack','slice','hole','merge','sort'];
 let level=null, levelIndex=Math.max(0,savedProgress.levelIndex|0), unit=50, stars=Math.max(0,savedProgress.stars|0);
 let phase='intro', phaseT=0, idleT=0, hintOn=false, waved=[];
 let activeType=null;
@@ -775,10 +775,14 @@ function starPath(c,s){ c.beginPath(); roundPolyPath(c,starPts(5,s,s*0.48),s*0.1
 /* ---------------- açılış ---------------- */
 let started=false,appView='start';
 /* ---------------- yazısız animasyonlu oyun menüsü ---------------- */
-const MAIN_MENU=['tower','paint','tumble','pop','rhythm','pattern','more','learn'];
-const MORE_MENU=['orchard','aquarium','fireworks'];
+// The main menu is split by age: calm touch play for 2–3, quick hypercasual games for 4+.
+const MAIN_MENU=['paint','tumble','pop','rhythm','pattern','orchard','more','learn'];
+const BIG_MENU=['tower','stack','slice','hole','merge','sort'];
+const MORE_MENU=['aquarium','fireworks'];
+let menuAge='small';
+try{ if(localStorage.getItem('evisgame-age')==='big') menuAge='big'; }catch(e){}
 const LEARN_MENU=['match','memory','numberdraw'];
-const menuKinds=()=>appView==='matchMenu'?MATCH_MENU:appView==='learnMenu'?LEARN_MENU:appView==='moreMenu'?MORE_MENU:MAIN_MENU;
+const menuKinds=()=>appView==='matchMenu'?MATCH_MENU:appView==='learnMenu'?LEARN_MENU:appView==='moreMenu'?MORE_MENU:menuAge==='big'?BIG_MENU:MAIN_MENU;
 const MATCH_MENU=['color','shape','size','count','animal'];
 function drawMiniShape(shape,x,y,s,color,alpha=1){
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);shapePath(ctx,shape,s);ctx.fillStyle=color;ctx.fill();
@@ -797,6 +801,7 @@ function beginMode(type){
   cvs.focus({preventScroll:true}); sndSel();
 }
 function handleMenuTap(x,y){
+  if(appView==='menu'){ const age=ageTabHit(x,y); if(age){ setMenuAge(age); return; } }
   const cards=menuCards(menuKinds()),hit=cards.find(c=>x>=c.x&&x<=c.x+c.w&&y>=c.y&&y<=c.y+c.h);
   if(!hit) return;
   if(hit.kind==='more'){openMenu('moreMenu');sndSel();return;}
@@ -1063,7 +1068,7 @@ function onCancel(e){
   if(d.p){ d.p.drag=false; d.p.wig=0.25; }
 }
 function cancelAllPointers(){
-  cancelStudioTouches();
+  cancelStudioTouches(); cancelArcadeTouches();
   for(const id of touchPointers.keys()){try{cvs.releasePointerCapture(id);}catch(e){}}
   touchPointers.clear();
   if(level&&level.type==='numberdraw'){ level.drawGame.active=null; level.drawGame.pointerId=null; }
@@ -1228,7 +1233,8 @@ restartLevelButton.addEventListener('click',()=>{
 });
 resetProgressButton.addEventListener('click',()=>{
   cancelAllPointers(); parts.length=0; levelIndex=0; stars=0; modeRounds={}; Object.keys(sensoryTotals).forEach(k=>delete sensoryTotals[k]);
-  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('evisgame-tower-v1'); }catch(e){}
+  try{ localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('evisgame-tower-v1'); localStorage.removeItem(ARCADE_KEY); }catch(e){}
+  arcadeSaves={};
   buildLevel(0); resetSheet.hidden=true; showToast('İlerleme sıfırlandı');
 });
 window.addEventListener('online',()=>showToast('Bağlantı yeniden kuruldu'));
@@ -1299,6 +1305,7 @@ function frame(now){
   if(level.adventure){
     updateAdventure(dt); updateMascot(dt);
     if(level.adventure.tower) drawTower(time);
+    else if(level.adventure.arcade) drawArcade(time);
     else { drawBackdrop(time); drawTopBar(time); drawMascot(time); drawAdventure(time); }
     drawParts();
     requestAnimationFrame(frame); return;
@@ -1394,6 +1401,12 @@ function frame(now){
 <script src="studios.js"></script>
 <script src="personality.js"></script>
 <script src="tower.js"></script>
+<script src="arcade.js"></script>
+<script src="stack.js"></script>
+<script src="slice.js"></script>
+<script src="hole.js"></script>
+<script src="merge.js"></script>
+<script src="sort.js"></script>
 <script src="ambience.js"></script>
 <script>resize(); requestAnimationFrame(frame);</script>
 </body>

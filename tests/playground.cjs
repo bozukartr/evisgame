@@ -13,17 +13,21 @@ const context=vm.createContext(sandbox),run=code=>vm.runInContext(code,context);
 const html=fs.readFileSync(path.join(root,'index.html'),'utf8');
 (async()=>{
 run(html.match(/<script>([\s\S]*?)<\/script>/)[1]);
-for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js','tower.js','ambience.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
+for(const file of ['touch-art.js','playground.js','sensory.js','vendor/matter-0.20.0.min.js','studios.js','personality.js','tower.js','arcade.js','stack.js','slice.js','hole.js','merge.js','sort.js','ambience.js'])run(fs.readFileSync(path.join(root,file),'utf8'));
 assert((await run('touchArtReady')).every(Boolean),'all SVG assets load');
 run('resize(); started=true; adsDisabled=true;');
 const sw=fs.readFileSync(path.join(root,'service-worker.js'),'utf8');
 for(const asset of run('TOUCH_ART_NAMES'))assert(sw.includes('./assets/play/'+asset+'.svg'),'SVG is cached for offline play');
 const render=name=>{if(process.env.EVIS_RENDER_DIR){fs.mkdirSync(process.env.EVIS_RENDER_DIR,{recursive:true});fs.writeFileSync(path.join(process.env.EVIS_RENDER_DIR,name+'.png'),els.get('c').toBuffer('image/png'));}};
 for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
-  sandbox.innerWidth=w;sandbox.innerHeight=h;run("resize(); openMenu(); drawGameMenu(0); drawGameMenu(3);");
-  assert.equal(run('menuLayer.children.length'),8);
+  sandbox.innerWidth=w;sandbox.innerHeight=h;run("resize(); openMenu(); for(let t=0;t<3;t+=.05)drawGameMenu(t);");
+  assert.equal(run('menuLayer.children.length'),10,'8 cards and the 2 age tabs');
   assert(run('menuCards(MAIN_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=0&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
+  assert(run('menuCards(MAIN_MENU).every(c=>c.y>=ageTabs().y+ageTabs().h)'),'cards sit below the age tabs');
   render(`menu-${w}x${h}`);
+  run("setMenuAge('big');for(let t=5;t<8;t+=.05)drawGameMenu(t);");assert.equal(run('menuLayer.children.length'),8,'6 quick games and the 2 age tabs');
+  assert(run('menuCards(BIG_MENU).every(c=>c.h>=44&&c.x>=0&&c.y>=ageTabs().y+ageTabs().h&&c.x+c.w<=W&&c.y+c.h<=H-75)'));
+  render(`menu-big-${w}x${h}`);run("setMenuAge('small');");
   for(const type of run('TYPES')){
     run(`beginMode('${type}');`);
     for(let i=1;i<=40;i++)run(`frame(last+50);`);
@@ -37,7 +41,7 @@ for(const [w,h] of [[390,844],[320,568],[844,390],[768,1024]]){
   }
 }
 sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
-for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble','tower'].includes(t))){
+for(const type of run('FREE_PLAY').filter(t=>!['paint','tumble','tower','stack','slice','hole','merge','sort'].includes(t))){
   run(`beginMode('${type}');`);
   assert.equal(run('phase'),'play','no intro lock');
   const before=run('level.adventure.total');
@@ -138,6 +142,63 @@ for(const [w,h] of [[320,568],[844,390],[768,1024]]){
 sandbox.innerWidth=390;sandbox.innerHeight=844;run('resize();');
 run('openMenu();');assert.equal(JSON.parse(saved.get('evisgame-progress-v1')).sensoryTotals.tower,run('sensoryTotals.tower'));
 run("beginMode('tower');");assert.equal(run('level.adventure.lvl'),2,'tower level persists');
+// Arcade (4+): shared level flow plus each game's own rules.
+saved.delete('evisgame-arcade-v1');run('arcadeSaves={};');
+const step=(n,dt=1/60)=>run(`for(let i=0;i<${n};i++)updateAdventure(${dt});`);
+// Blok kulesi: perfect drops snap, offset drops are cut, a full miss retries the same level.
+run("beginMode('stack');var sg=level.adventure;");
+const stackAlign=off=>run(`{let n=0;while(n++<600){updateAdventure(1/60);const m=sg.moving,a=m.axis,t=sg.blocks[sg.blocks.length-1];if(Math.abs((m[a+'0']+m[a+'1'])/2-(t[a+'0']+t[a+'1'])/2-(${off}))<.02)break;}}`);
+stackAlign(0);run('stackPlace(sg);');assert.equal(run('sg.placed'),1);assert.equal(run('sg.combo'),1,'aligned drop is perfect');
+stackAlign(.2);run('var wBefore=sg.moving[sg.moving.axis+"1"]-sg.moving[sg.moving.axis+"0"];stackPlace(sg);var stTop=sg.blocks[sg.blocks.length-1];');
+assert(run('Math.abs((stTop.z1-stTop.z0)*(stTop.x1-stTop.x0)-(wBefore-.2))<.03'),'overhang is sliced off');assert(run('sg.falling.length>0'));
+run('{const mv=sg.moving,ax=mv.axis;mv[ax+"0"]+=5;mv[ax+"1"]+=5;stackPlace(sg);}');assert.equal(run('sg.state'),'retry','full miss asks to try again');
+step(100);assert.equal(run('sg.state'),'play');assert.equal(run('sg.placed'),0);assert.equal(run('sg.lvl'),1,'retry keeps the level');
+run('sg.target=2;');stackAlign(0);run('stackPlace(sg);');stackAlign(0);run('stackPlace(sg);');assert.equal(run('sg.state'),'win');
+assert.equal(JSON.parse(saved.get('evisgame-arcade-v1')).stack.lvl,2);step(150);assert.equal(run('sg.lvl'),2);assert.equal(run('sg.state'),'play');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-stack');
+// Meyve ninja: swipes slice fruit, spiky balls cost hearts, three hearts retry.
+run("beginMode('slice');var lg=level.adventure;");step(120);
+assert(run('lg.fruits.length>0'),'fruit is thrown in');
+run('lg.fruits.splice(1);lg.fruits[0].spiky=false;var f0=lg.fruits[0];startTouch({pointerId:31,clientX:f0.x-80,clientY:f0.y});moveTouch({pointerId:31,clientX:f0.x+80,clientY:f0.y,preventDefault(){}});');
+assert.equal(run('lg.sliced'),1,'a swipe through the fruit slices it');assert.equal(run('lg.halves.length'),2);
+run('endTouch({pointerId:31});');
+run('for(let i=0;i<3;i++){lg.fruits.push({kind:0,spiky:true,x:100,y:300,vx:0,vy:0,rot:0,vr:0});sliceCut(lg,lg.fruits[lg.fruits.length-1],0,-1);}');
+assert.equal(run('lg.state'),'retry');step(100);assert.equal(run('lg.hearts'),3);assert.equal(run('lg.sliced'),0);
+run('for(let i=0;i<400;i++){sliceSpawn(lg);}');assert(run('lg.fruits.length<=12'),'bounded fruit');
+run('lg.fruits.forEach(f=>f.spiky=false);for(let i=0;i<60&&lg.fruits.length;i++)sliceCut(lg,lg.fruits[0],0,-1);');assert(run('lg.halves.length<=24&&lg.splats.length<=10&&lg.fx.length<=160'),'bounded effects');
+run('startTouch({pointerId:32,clientX:50,clientY:400});cancelAllPointers();');step(30);assert.equal(run('lg.trails.size'),0,'trails clear after cancel');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-slice');
+// Obur delik: every level can be finished by eating smaller objects first.
+for(const lvl of [1,4,7]){
+  run(`arcadeSaves.hole={lvl:${lvl}};beginMode('hole');var hg=level.adventure;`);
+  const r0=run('hg.hole.r');
+  run(`for(let i=0;i<9000&&hg.state==='play';i++){if(i%20===0){const o=hg.objs.filter(o=>o.fall===-1&&o.r<=hg.hole.r*.92).sort((a,b)=>a.r-b.r)[0];if(o)tapAdventure(o.x,o.y);}updateAdventure(1/60);}`);
+  assert.equal(run('hg.state'),'win',`hole level ${lvl} is always completable`);assert(run('hg.hole.r')>r0*2,'hole grows');
+}
+run("arcadeSaves.hole={lvl:1};beginMode('hole');hg=level.adventure;startTouch({pointerId:41,clientX:200,clientY:600});moveTouch({pointerId:41,clientX:120,clientY:520,preventDefault(){}});");
+assert(run('hg.hole.tx<hg.field.x+hg.field.w/2'),'drag moves the hole');run('cancelAllPointers();');assert.equal(run('hg.drag'),null);
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-hole');
+// Meyve birleştir: equal fruit merge upward; drops respect cooldown; a cancelled drag never drops.
+run("beginMode('merge');var mg=level.adventure;mg.target=9;mergeAdd(mg,2,150,400);mergeAdd(mg,2,150+mergeR(2)*2-2,400);");step(120);
+assert(run('mg.fruits.some(f=>f.plugin.tier===3)&&!mg.fruits.some(f=>f.plugin.tier===2)'),'two grapes become a tangerine');assert.equal(run('mg.top'),3);
+run('mg.cool=0;var mBefore=mg.fruits.length;tapAdventure(mg.jx+50,300);tapAdventure(mg.jx+50,300);');assert.equal(run('mg.fruits.length'),run('mBefore')+1,'cooldown between drops');
+step(60);run('var b2=mg.fruits.length;startTouch({pointerId:51,clientX:200,clientY:300});cancelAllPointers();');assert.equal(run('mg.fruits.length'),run('b2'),'cancel does not drop');
+run('startTouch({pointerId:52,clientX:120,clientY:300});endTouch({pointerId:52,clientX:120,clientY:300,type:"pointerup"});');assert.equal(run('mg.fruits.length'),run('b2')+1,'release drops');
+assert.equal(run('mg.state'),'play');run('for(let i=0;i<40;i++)mergeAdd(mg,6,80+(i%3)*120,-120-i*60).plugin.merged=true;');run('for(let i=0;i<900&&mg.state==="play";i++)updateAdventure(1/60);');assert.equal(run('mg.state'),'retry','overflow retries');step(100);step(60);assert.equal(run('mg.fruits.length'),0);
+run('mg.target=4;mergeAdd(mg,3,120,450);mergeAdd(mg,3,120+mergeR(3)*2-2,450);');step(90);assert.equal(run('mg.state'),'win','reaching the target fruit wins');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-merge');
+// Renk sırala: generated puzzles are solvable; moves, completion, undo and win.
+for(let n=3;n<=7;n++)for(let k=0;k<3;k++)assert(run(`sortSolvable(sortGenerate(${n}))`),`solvable sort puzzle with ${n} colours`);
+run("beginMode('sort');var og=level.adventure;og.tubes=[[0,0,0],[1,1,1,0],[1],[]];og.done=[false,false,false,false];og.hidden=[0,0,0,0];og.nColors=2;layoutArcade();");
+run('tapAdventure(og.items[1].x,og.items[1].y);');assert.equal(run('og.sel'),1);
+run('tapAdventure(og.items[0].x,og.items[0].y);');assert(run('og.done[0]&&og.tubes[0].length===4'),'tube completes');
+run('tapAdventure(og.undoBtn.x,og.undoBtn.y);');assert(run('!og.done[0]&&og.tubes[1].length===4'),'undo restores');
+run('tapAdventure(og.items[2].x,og.items[2].y);tapAdventure(og.items[3].x,og.items[3].y);');assert.equal(run('og.tubes[3].length'),1,'move onto empty tube');
+run('tapAdventure(og.items[1].x,og.items[1].y);tapAdventure(og.items[0].x,og.items[0].y);tapAdventure(og.items[1].x,og.items[1].y);tapAdventure(og.items[3].x,og.items[3].y);');
+assert(run('sortSolved(og.tubes)'));step(60);assert.equal(run('og.state'),'win');
+run('ctx.save();drawAdventure(3);ctx.restore();');render('arcade-sort');
+run('openMenu();');for(const t of ['stack','slice','hole','merge','sort'])assert(JSON.parse(saved.get('evisgame-progress-v1')).sensoryTotals[t]>0,`${t} exploration saved`);
+run("setMenuAge('big');");assert.equal(saved.get('evisgame-age'),'big');assert.equal(run("ageTabHit(ageTabs().x+5,ageTabs().y+5)"),'small');run("handleMenuTap(ageTabs().x+5,ageTabs().y+5);");assert.equal(run('menuAge'),'small','tab tap switches age');
 // Scene transitions capture the old screen and finish without leaving state behind.
 run('openMenu();');assert(run('sceneFx.t===0&&!!sceneFx.snap'),'transition starts from a snapshot');
 run('for(let i=0;i<60;i++)frame(last+16);');assert.equal(run('sceneFx.t'),1,'transition completes');
@@ -190,5 +251,5 @@ if(process.env.EVIS_RENDER_DIR){
  run('resize();');
 }
 
-console.log('PASS: 16 modes × 4 viewports; tower smash/bounce/fire/goal/level save/layout; scene transitions; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
+console.log('PASS: 21 modes × 4 viewports; 4+ arcade: stack cut/perfect/retry/win, slice swipe/hearts, hole always completable, merge physics/cooldown/overflow, sort solver/undo/win; age tabs; tower smash/bounce/fire/goal/level save/layout; scene transitions; 37 SVGs; character transitions/gaze/cooldowns/reduced motion; painting and rigid-body physics; 8 continuous touch games; rapid input bounds; multi-touch/drag/cancel; modal blocking; saved progress; growth/fish reactions; learning menu; legacy matching and memory.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
