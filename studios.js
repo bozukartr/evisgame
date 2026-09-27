@@ -151,7 +151,10 @@ function rebuildToys(g,next){
   toyBody(g,cx-s*2.65,floor-s*.5,s,s,'ball',n++);
  }
  // Bodies begin at rest; no Runner or independent timers survive navigation.
- Matter.Events.on(g.engine,'collisionStart',event=>{collideCharacters(g,event);if(time-g.hitSound<.09)return;const pair=event.pairs.find(p=>(p.bodyA.plugin.toy||p.bodyB.plugin.toy)&&Math.max(p.bodyA.speed,p.bodyB.speed)>1.2);if(pair){g.hitSound=time;tone(170+Math.min(160,pair.bodyA.speed*20),.08,'sine',.09);}});
+ Matter.Events.on(g.engine,'collisionStart',event=>{collideCharacters(g,event);
+  // Dust puffs mark real, hard landings.
+  const thud=event.pairs.find(p=>Math.max(p.bodyA.speed,p.bodyB.speed)>3.5&&p.collision?.supports?.[0]);
+  if(thud&&!REDUCED){const s=thud.collision.supports[0];for(let i=0;i<4;i++)effect(g,{kind:'puff',x:s.x,y:s.y,vx:rnd(-45,45),vy:rnd(-50,-12),life:0,max:rnd(.35,.55),color:'#FFFFFF',r:rnd(5,9)});}if(time-g.hitSound<.09)return;const pair=event.pairs.find(p=>(p.bodyA.plugin.toy||p.bodyB.plugin.toy)&&Math.max(p.bodyA.speed,p.bodyB.speed)>1.2);if(pair){g.hitSound=time;tone(170+Math.min(160,pair.bodyA.speed*20),.08,'sine',.09);}});
  syncToyItems(g);
 }
 function syncToyItems(g){g.items=g.toys.map((p,i)=>({id:i,x:p.position.x,y:p.position.y,r:Math.max(22,Math.min(p.plugin.w,p.plugin.h)/2),body:p}));g.focus=Math.min(g.focus,g.items.length-1);}
@@ -170,7 +173,7 @@ function grabToy(g,d,x,y){
  d.constraint=Matter.Constraint.create({pointA:{x,y},bodyB:body,pointB:{x:0,y:0},length:0,stiffness:.12,damping:.18});Matter.Composite.add(g.engine.world,d.constraint);
 }
 function updateStudio(dt){
- const g=level.adventure;g.reward=Math.max(0,g.reward-dt);g.effects=g.effects.filter(e=>{e.life+=dt;return e.life<e.max;});
+ const g=level.adventure;g.reward=Math.max(0,g.reward-dt);g.effects=g.effects.filter(e=>{e.life+=dt;if(!REDUCED){e.x+=e.vx*dt||0;e.y+=e.vy*dt||0;}return e.life<e.max;});
  if(level.type!=='tumble')return;
  g.accumulator=Math.min(g.accumulator+dt,.1);
  while(g.accumulator>=1/120){Matter.Engine.update(g.engine,1000/120);g.accumulator-=1/120;}
@@ -194,6 +197,7 @@ function drawStudio(time){
   for(let i=0;i<6;i++){ctx.strokeStyle='#D7C4A840';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(b.x,b.y+b.h*(i+1)/7);ctx.lineTo(b.x+b.w,b.y+b.h*(i+1)/7);ctx.stroke();}
   pill(b.x,g.floor,b.w,14,'#CDAF88',0);g.toys.forEach(drawBlock);ctx.restore();
  }
+ drawAdventureEffects(g,time);
  if(b.y>safe.top+130)label(SENSORY_HINTS[level.type],W/2,b.y-23,13,'#6E8990');
 }
 window.addEventListener('pagehide',persistPaint);

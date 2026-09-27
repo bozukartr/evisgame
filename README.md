@@ -105,3 +105,36 @@ Testler ayrıca boya çizgisi, geri alınabilir temizleme, çoklu parmak, sını
 - Azaltılmış hareket tercihinde gövde sallanması, esneme, yan vurgu parçacıkları ve göz kırpma kaldırılır; dokunma ve yüz ifadeleri çalışmaya devam eder.
 
 Testler 15 modu dört ölçüde çizer; karakter durum önceliği, temas tekrar sınırı, kıkırdama, uyanma, dönen/aynalı bakışlar, pointer iptali ve fizik geometrisinin korunmasını doğrular. `EVIS_REDUCED=1 node tests/playground.cjs` azaltılmış hareketi kontrol eder. `EVIS_RENDER_DIR` ayrıca altı kişiliğin ifade tablosunu ve 90 karelik tutulma–bırakılma–iniş animasyonunu üretir. Bunlar gerçek Canvas ve oyun mantığı testleridir; gerçek telefon tarayıcısındaki dokunma, ses, kare hızı ve PWA kontrolünün yerine geçmez.
+
+## Kule topu ve görsel yenilenme · v2.4
+
+### Kule topu (yeni)
+
+Dönen sarmal bir kulede zıplayan topu aşağı indiren yeni oyun, ana menünün ilk kartıdır.
+
+- **Dokun:** top bir katı kırar. **Basılı tut:** top art arda katları parçalar. Parmağı kaldırınca top yeniden zıplar.
+- Renkli dilimler kırılır; koyu dilimler kırılmaz, yalnızca topu yumuşak bir “boing” ile geri zıplatır. Kaybetme, süre veya can yoktur.
+- Basılı tutarak art arda kırmak ateş göstergesini doldurur; dolunca top birkaç saniyeliğine alev alır ve koyu dilimleri de kırar.
+- Altın zemine ulaşınca “Süper!” kutlaması, konfeti ve bir sonraki kule. Her seviye yeni renk teması, altıgen/sekizgen kat ve farklı sarmal dizilim getirir; seviye cihazda saklanır.
+- Sahte 3D çizim: katlar elips izdüşümüyle, ışık yönüne göre gölgelenen yan duvarlarla ve arkadan öne sıralamayla Canvas'a çizilir. Kırılan katlar dönen parçalara ayrılır; top zıplarken ezilip uzar, sekmelerde boya lekesi bırakır, gözleriyle duygusunu gösterir.
+- Tüm uzunluklar kat yarıçapının katıdır; ekran döndürülünce oyun durumu korunur. Parça, iz ve dalga sayıları sınırlıdır. Azaltılmış harekette sarsıntı, iz ve parçalar kapanır.
+
+### Diğer oyunlara görsel iyileştirmeler
+
+- **Canlı arka plan:** Bahçe'de kayan bulutlar ve ışınları dönen gülen güneş, Deniz'de yükselen kabarcıklar, Uzay'da parıldayan yıldızlar ve kayan yıldız.
+- **Sahne geçişleri:** yeni ekran, dokunulan noktadan büyüyen renkli bir baloncukla açılır.
+- **Menü:** kartlar sırayla yaylanarak gelir, üzerlerinden parlak bir ışık geçer; başlık harfleri renkli dalga yapar; Kule topu kartında canlı dönen kule önizlemesi ve “YENİ” etiketi. Meyve bahçesi “Diğer oyunlar” altına taşındı.
+- **Açılış ekranı:** zıplayan ayıcık, etrafında dönen oyuncaklar ve nabız gibi atan başlat düğmesi.
+- **Üst bilgi:** her oyunda simge rozeti ve bir sonraki yıldıza doğru dolan halka; öğrenme oyunlarında “0 / 2” yerine dolan yıldızlar.
+- **Balonlar:** gökkuşağı yansımalı kenarlar, patlarken damlacıklar ve yaylanarak yeniden doğan balonlar.
+- **Neşeli müzik:** çalınan enstrümanın rengine bürünen kart, yayılan ses dalgası ve sallanarak yükselen notalar.
+- **Sihirli bahçe:** rüzgârda sallanan çimenler, uçuşan polenler, kanat çırpan kelebekler.
+- **Meyve bahçesi:** dönerek ve iz bırakarak uçan meyveler, zıplayan ve dolan sepet, düşen yapraklar.
+- **Akvaryum:** dalgalanan ışık huzmeleri, sallanan yosunlar, yükselen kabarcıklar, çakıllar.
+- **Işık şöleni:** parlayan (ışık toplamalı) havai fişek parçacıkları, yerçekimi ve sürtünme, alevli roket izi, ay ve tepe silueti.
+- **Oyuncakları devir:** sert çarpışmalarda toz bulutu; boya ve oyuncak ekranlarında dokunma halkaları artık görünür.
+- **Hafıza:** dönerken ışık alan kartlar ve desenli kart sırtı. Konfeti 3D döner, bir kısmı yıldız şeklindedir.
+
+Ayrıca sayfa açılırken erken gelen görüntü alanı olayında oluşan `buildBackground is not defined` hatası giderildi.
+
+Testler 16 modu dört ekran ölçüsünde çizer; kuleyi dokunma/basılı tutma ile kırmayı, koyu dilimde yalnızca zıplamayı, ateş modunu, hedefe ulaşmayı, seviye kaydını, ekran ölçüsü değişimini, modal kilidini ve sahne geçişini doğrular. Gerçek Chromium'da konsol hatasız çalıştığı ve kule kırılırken 60 fps verdiği kontrol edildi. Gerçek telefonda dokunma, ses ve titreşim kontrolünün yerine geçmez.
